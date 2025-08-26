@@ -1,4 +1,120 @@
-<!doctype html><meta charset="utf-8">
-<meta http-equiv="refresh" content="0; url=/public/dashboard_v2.html">
-<script>location.replace('/public/dashboard_v2.html');</script>
-<p>Redirecionando para a Dashboard V2… <a href="/public/dashboard_v2.html">clique aqui</a></p>
+<!doctype html>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>RastroO — Dashboard</title>
+<style>
+  :root{--bg:#0b0c10;--text:#e6edf3;--muted:#9aa3b2;--card:#111319;--border:#1f2430;--head:#0e1117;--primary:#8b5cf6;--ok:#22c55e}
+  .light{--bg:#f7fafc;--text:#0f172a;--muted:#64748b;--card:#ffffff;--border:#e5e7eb;--head:#f8fafc;--primary:#6d5cff}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,Roboto}
+  .wrap{max-width:1120px;margin:0 auto;padding:20px}
+  .top{display:flex;gap:10px;align-items:center;justify-content:space-between}
+  .btn,select,input{background:var(--card);color:var(--text);border:1px solid var(--border);padding:8px 10px;border-radius:10px}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px}
+  h3{margin:0 0 6px 0;font-size:13px;color:var(--muted)}
+  .big{font-size:26px;margin:0}
+  .grid{margin-top:12px;border:1px solid var(--border);border-radius:12px;overflow:auto}
+  table{min-width:720px;width:100%;border-collapse:collapse}
+  th,td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+  th{background:var(--head)}
+</style>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div style="display:flex;gap:8px;align-items:center">
+        <strong>RastroO</strong>
+        <select id="groupBy"><option value="creator">Agrupar: Criadores</option><option value="video">Agrupar: Vídeos</option></select>
+      </div>
+      <div style="display:flex;gap:8px">
+        <select id="period"><option value="today">Hoje</option><option value="7d" selected>7 dias</option><option value="15d">15 dias</option><option value="30d">30 dias</option><option value="all">Tudo</option></select>
+        <input id="filter" placeholder="Filtrar (@creator / vídeo)"/>
+        <button id="leads" class="btn" onclick="location.href='/public/leads.html'">Leads</button>
+        <button id="reels" class="btn" onclick="location.href='/public/reels.html'">Reels</button>
+        <button id="theme" class="btn">🌙/☀️</button>
+        <button id="refresh" class="btn">Atualizar</button>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card"><h3>Leads</h3><p id="kLeads" class="big">0</p></div>
+      <div class="card"><h3>Vendas</h3><p id="kSales" class="big">0</p></div>
+      <div class="card"><h3>Receita</h3><p id="kRev" class="big">R$ 0,00</p></div>
+    </div>
+
+    <div class="grid">
+      <table>
+        <thead>
+          <tr id="thead">
+            <th id="thA">Criador</th>
+            <th>Leads</th>
+            <th>Vendas</th>
+            <th>CR (Lead→Venda)</th>
+            <th>Receita</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+  const root = document.documentElement;
+  const themeBtn = document.getElementById('theme');
+  function applyTheme(t){ if(t==='light'){ root.classList.add('light'); } else { root.classList.remove('light'); } localStorage.setItem('rastroo_theme', t); }
+  applyTheme(localStorage.getItem('rastroo_theme') || 'dark');
+  themeBtn.onclick = () => applyTheme(root.classList.contains('light') ? 'dark' : 'light');
+
+  const period = document.getElementById('period');
+  const filter = document.getElementById('filter');
+  const groupBy = document.getElementById('groupBy');
+  const tbody = document.getElementById('tbody');
+  const kLeads = document.getElementById('kLeads');
+  const kSales = document.getElementById('kSales');
+  const kRev   = document.getElementById('kRev');
+
+  function rangeOf(p){
+    if(p==='today'){ const d=new Date(); const s=d.toISOString().slice(0,10); return {from:s,to:s}; }
+    if(p==='7d' || p==='15d' || p==='30d'){
+      const n = parseInt(p); const a=new Date(); const b=new Date(Date.now()- (n-1)*86400000);
+      return {from:b.toISOString().slice(0,10), to:a.toISOString().slice(0,10)};
+    }
+    return {};
+  }
+
+  async function load(){
+    const {from,to} = rangeOf(period.value);
+    const qs = new URLSearchParams({ ...(from?{from}:{}) , ...(to?{to}:{}) }).toString();
+    const r = await fetch('/api/report?'+qs); const j = await r.json();
+    if(!j.ok) return;
+    kLeads.textContent = (j.summary.leads||0).toLocaleString('pt-BR');
+    kSales.textContent = (j.summary.sales||0).toLocaleString('pt-BR');
+    kRev.textContent   = (j.summary.revenue||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+
+    const rows = (groupBy.value==='creator' ? j.perCreator : j.perVideo).slice();
+    const q = (filter.value||'').toLowerCase().trim();
+    const filt = rows.filter(r => {
+      const key = (groupBy.value==='creator' ? r.creator : (r.vlabel||r.vid||r.key)||'').toLowerCase();
+      return !q || key.includes(q);
+    });
+    render(filt);
+  }
+
+  function render(list){
+    tbody.innerHTML='';
+    for(const r of list){
+      const tr=document.createElement('tr');
+      const name = groupBy.value==='creator' ? (r.creator||'—') : (r.vlabel||r.vid||'—');
+      tr.innerHTML = `
+        <td>${name}</td>
+        <td>${(r.leads||0).toLocaleString('pt-BR')}</td>
+        <td>${(r.sales||0).toLocaleString('pt-BR')}</td>
+        <td>${r.cr_l_to_v||0}%</td>
+        <td>R$ ${(r.revenue||0).toLocaleString('pt-BR')}</td>`;
+      tbody.appendChild(tr);
+    }
+  }
+
+  document.getElementById('refresh').onclick = load;
+  [period, filter, groupBy].forEach(el => el.onchange = load);
+  load();
+</script>
