@@ -1,5 +1,5 @@
-// server.js — RastroO (DN) — Dashboard (lead-only) + IG Webhooks + Reels/Insights
-// + OAuth Meta (Conectar Instagram) direto no RastroO
+// server.js — RastroO (DN) — Lead-only + IG Webhooks + IG OAuth + Reels
+// Redireciona TUDO para /public/app.html (app novo, mobile-first)
 
 const express = require('express');
 const path = require('path');
@@ -15,6 +15,7 @@ const ALLOWED = new Set([
   'https://rastroo.site',
   'https://www.rastroo.site',
   'https://trk.rastroo.site',
+  'https://app.rastroo.site', // se você usar esse subdomínio
   'https://896.xpages.co'
 ]);
 app.use((req, res, next) => {
@@ -70,8 +71,8 @@ function summarize(events, from, to){
 
   for (const e of rows){
     const creator = (e.creator || '—').trim();
-    const vid = (e.meta && (e.meta.vid || e.meta.vurl || e.meta.utm_content)) || '—';
-    const vlabel = (e.meta && (e.meta.vurl || e.meta.vid)) || vid;
+    const vid = e.meta && (e.meta.vid || e.meta.vurl || e.meta.utm_content);
+    const vlabel = (e.meta && (e.meta.vurl || e.meta.vid)) || (vid || '—');
 
     if (e.type === 'lead') leads++;
     if (e.type === 'sale'){ sales++; revenue += (e.amount || 0); }
@@ -82,7 +83,7 @@ function summarize(events, from, to){
       r.creator = creator;
     });
 
-    pushRow(perVideo, vid, r => {
+    if (vid) pushRow(perVideo, vid, r => {
       if (e.type === 'lead') r.leads++;
       if (e.type === 'sale'){ r.sales++; r.revenue += (e.amount || 0); }
       r.vid = vid; r.vlabel = vlabel;
@@ -189,7 +190,6 @@ app.get('/api/report', (req,res)=>{
   const { from, to } = req.query;
   res.json({ ok:true, ...summarize(DB.events, from, to) });
 });
-app.get('/api/ping', (_req,res)=> res.json({ ok:true, ts: Date.now() }));
 
 // --------- LEADS com etiquetas ---------
 function computeLeadStatus(iu, stats){
@@ -280,7 +280,7 @@ function buildUrlFromReq(q){
   const u = new URL(base);
   if (vid) u.searchParams.set('vid', vid);
   if (q.utm_source) u.searchParams.set('utm_source', q.utm_source);
-  if (q.r) u.searchParams.set('r', q.r);
+  if (q.r) q.iu ? u.searchParams.set('iu', q.iu) : u.searchParams.set('r', q.r);
   if (q.iu) u.searchParams.set('iu', q.iu);
   return { url: u.toString(), vid };
 }
@@ -393,7 +393,6 @@ app.get('/auth/ig/login', (req,res)=>{
   url.searchParams.set('state', state);
   res.redirect(url.toString());
 });
-
 async function fbGET(path, params){
   const url = new URL(`https://graph.facebook.com/v18.0/${path}`);
   for (const [k,v] of Object.entries(params||{})) url.searchParams.set(k, v);
@@ -402,7 +401,6 @@ async function fbGET(path, params){
   if (!r.ok) throw new Error((j && j.error && j.error.message) || 'Erro OAuth');
   return j;
 }
-
 app.get('/auth/ig/callback', async (req,res)=>{
   try{
     const { code, state } = req.query;
@@ -415,7 +413,6 @@ app.get('/auth/ig/callback', async (req,res)=>{
       return res.status(400).send('Config faltando: IG_APP_ID/IG_APP_SECRET/IG_REDIRECT');
     }
 
-    // 1) Troca code -> short-lived token
     const tokenResp = await fbGET('oauth/access_token', {
       client_id: IG_APP_ID,
       client_secret: IG_APP_SECRET,
@@ -424,7 +421,6 @@ app.get('/auth/ig/callback', async (req,res)=>{
     });
     const shortToken = tokenResp.access_token;
 
-    // 2) Exchange para long-lived
     const longResp = await fbGET('oauth/access_token', {
       grant_type: 'fb_exchange_token',
       client_id: IG_APP_ID,
@@ -433,11 +429,9 @@ app.get('/auth/ig/callback', async (req,res)=>{
     });
     const longToken = longResp.access_token;
 
-    // 3) /me/accounts → pega páginas
     const pages = await fbGET('me/accounts', { access_token: longToken });
     const data = pages.data || [];
 
-    // 4) procura página com instagram_business_account
     let chosen = null;
     for (const p of data){
       try{
@@ -459,7 +453,6 @@ app.get('/auth/ig/callback', async (req,res)=>{
       return res.status(400).send('Não encontrei um Instagram Business/Creator ligado a uma página nessa conta.');
     }
 
-    // 5) salva credenciais ativas
     DB.igCreds = {
       token: longToken,
       igid: chosen.igid,
@@ -467,7 +460,6 @@ app.get('/auth/ig/callback', async (req,res)=>{
       username: chosen.username
     };
 
-    // volta pra UI
     const okURL = `/public/connect.html?ok=1&user=${encodeURIComponent(DB.igCreds.username)}&igid=${encodeURIComponent(DB.igCreds.igid)}`;
     res.redirect(okURL);
   }catch(e){
@@ -475,9 +467,13 @@ app.get('/auth/ig/callback', async (req,res)=>{
   }
 });
 
-// --------- Static & root ---------
+// --------- REDIRECIONAMENTOS p/ padronizar no app novo ---------
+app.get('/', (_req,res)=> res.redirect('/public/app.html'));
+// atalho p/ qualquer um que ainda acesse rotas antigas:
+app.get(['/public','/public/','/public/dashboard.html','/dashboard','/panel'], (_req,res)=> res.redirect('/public/app.html'));
+
+// --------- Static ---------
 app.use('/public', express.static(path.join(__dirname, 'public'), { maxAge: 0 }));
-app.get('/', (_req,res)=> res.redirect('/public/dashboard.html'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, ()=> console.log('RastroO running on port', PORT));
