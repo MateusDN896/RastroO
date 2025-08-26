@@ -1,63 +1,57 @@
 <!doctype html>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>RastroO — Conectar Instagram</title>
-<style>
-  :root{--bg:#0b0c10;--text:#e6edf3;--muted:#9aa3b2;--card:#111319;--border:#1f2430;--ok:#22c55e;--bad:#ef4444}
-  body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,Roboto}
-  .wrap{max-width:720px;margin:0 auto;padding:24px}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px}
-  .btn{background:#151a23;color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:10px;cursor:pointer}
-  .row{display:flex;gap:8px;align-items:center;margin:8px 0}
-  .muted{color:var(--muted)}
-  .ok{color:var(--ok)}
-  .bad{color:var(--bad)}
-</style>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Conectar Instagram — RastroO</title>
+  <style>
+    :root{color-scheme:dark light;font-family:system-ui,Segoe UI,Roboto,Arial}
+    body{margin:0;padding:24px;display:flex;min-height:100dvh;align-items:center;justify-content:center;background:#0b0e12;color:#eef}
+    .card{width:min(720px,92vw);background:#121722;border:1px solid #1f2a38;border-radius:16px;padding:20px}
+    h1{margin:0 0 12px 0}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    button{padding:12px 16px;border-radius:10px;border:1px solid #273447;background:#1b2533;color:#cfe;cursor:pointer}
+    .ok{color:#7ef38d}
+    .warn{color:#ffca64}
+    .err{color:#ff7a7a}
+    .pill{display:inline-block;padding:2px 8px;border:1px solid #2a394f;border-radius:999px;font-size:12px;margin-left:6px}
+    .k{opacity:.65}
+  </style>
+</head>
 <body>
-  <div class="wrap">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <h2 style="margin:0">Conectar Instagram</h2>
-      <button class="btn" onclick="location.href='/public/dashboard.html'">← Dashboard</button>
+  <div class="card">
+    <h1>Conectar Instagram</h1>
+    <div id="msg" class="k">Checando status…</div>
+    <div style="height:8px"></div>
+    <div class="row">
+      <button onclick="connect()">Conectar com Instagram (Meta)</button>
+      <button onclick="location.href='/public/app.html#/dashboard'">← Dashboard</button>
     </div>
-
-    <div class="card">
-      <p class="muted">Conecte sua conta para mostrar <strong>Reels & Insights</strong> e cruzar com <strong>Leads/Vendas</strong>.</p>
-      <div class="row"><button id="login" class="btn">Conectar com Instagram (Meta)</button></div>
-      <div id="status" class="row muted">Checando status…</div>
-      <div id="details" class="row" style="display:none"></div>
-    </div>
+    <div style="height:12px"></div>
+    <pre id="st" style="white-space:pre-wrap;word-break:break-word;background:#0f141d;padding:12px;border-radius:10px;border:1px solid #223044"></pre>
   </div>
 
   <script>
-    const qs = new URLSearchParams(location.search);
-    const ok = qs.get('ok');
-    const statusEl = document.getElementById('status');
-    const detailsEl = document.getElementById('details');
-
-    async function refresh(){
-      const r = await fetch('/api/ig/creds'); const j = await r.json();
-      if(!j.ok){ statusEl.innerHTML = '<span class="bad">Erro ao checar credenciais.</span>'; return; }
-      if(j.connected){
-        statusEl.innerHTML = '<span class="ok">Conectado</span>';
-        detailsEl.style.display = 'flex';
-        detailsEl.innerHTML = `
-          <div class="muted">IG ID:</div><div>${j.igid}</div>
-          <div class="muted" style="margin-left:16px">Usuário:</div><div>@${(j.username||'').replace(/^@/,'')}</div>
-          <div class="muted" style="margin-left:16px">Token:</div><div>${j.token_preview}</div>`;
-      }else{
-        statusEl.innerHTML = 'Não conectado';
-        detailsEl.style.display = 'none';
-      }
+    function hashNote() {
+      const h = location.hash.slice(1);
+      if (!h) return;
+      const el = document.getElementById("msg");
+      if (h.startsWith("connected")) el.innerHTML = "✅ Conectado! Recarregue o Dashboard.";
+      else if (h.startsWith("no_ig_link")) el.innerHTML = "⚠️ Conectado ao Facebook, mas NÃO há Instagram Business ligado a nenhuma Página desta conta. Ligue seu IG a uma Página no app do IG (Configurações › Conta profissional › Compartilhar com o Facebook).";
+      else if (h.startsWith("state_error")) el.innerHTML = "❌ State inválido/expirado. Tente novamente.";
+      else if (h.startsWith("token_error")) el.innerHTML = "❌ Erro trocando o code pelo token.";
+      else if (h.startsWith("callback_error")) el.innerHTML = "❌ Erro no callback.";
     }
-
-    document.getElementById('login').onclick = () => {
-      location.href = '/auth/ig/login';
-    };
-
-    if(ok){ // volta do callback
-      setTimeout(()=> { location.href = '/public/reels.html'; }, 600);
+    async function refreshStatus(){
+      const r = await fetch("/api/ig/status"); const j = await r.json();
+      document.getElementById("st").textContent = JSON.stringify(j, null, 2);
+      const el = document.getElementById("msg");
+      if (j.connected) el.innerHTML = `✅ Conectado como @${j.username} (${j.page_name})`;
+      else if (j.connected_facebook) el.innerHTML = "⚠️ Facebook conectado, mas falta IG vinculado a uma Página.";
+      else el.innerHTML = "Não conectado.";
     }
-    refresh();
+    function connect(){ location.href="/auth/ig/login"; }
+    hashNote(); refreshStatus();
   </script>
 </body>
 </html>
