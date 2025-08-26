@@ -2,159 +2,208 @@
 <html lang="pt-br" data-theme="light">
 <head>
   <meta charset="utf-8" />
-  <title>RastroO — Dashboard</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RastroO — Dashboard V4 (Mobile‑first)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      --bg:#0b0c10; --text:#111; --muted:#667085;
-      --card:#ffffff; --border:#e5e7eb; --head:#f6f7fb;
-      --primary:#6d5cff; --primary-contrast:#fff;
-      --shadow:0 2px 14px rgba(14,22,40,.08);
-      --chip:#eef2ff; --table-stripe:#fbfbfd;
+      --bg:#0b0c10; --text:#0f172a; --muted:#64748b;
+      --card:#ffffff; --border:#e5e7eb; --head:#f8fafc;
+      --primary:#6d5cff; --primary-contrast:#ffffff;
+      --shadow:0 6px 24px rgba(2,6,23,.08);
+      --chip:#eef2ff; --table-stripe:#fbfbfd; --ring:#dbeafe;
       --grad:linear-gradient(135deg,#6d5cff 0%,#23a6d5 100%);
     }
     [data-theme="dark"]{
       --bg:#0b0b0f; --text:#e6e8ee; --muted:#9aa3b2;
-      --card:#12131a; --border:#1f2430; --head:#0e1117;
+      --card:#111319; --border:#1f2430; --head:#0e1117;
       --primary:#8b5cf6; --primary-contrast:#0b0b0f;
-      --shadow:0 2px 16px rgba(0,0,0,.35);
-      --chip:#1c2231; --table-stripe:#141a25;
+      --shadow:0 10px 32px rgba(0,0,0,.45);
+      --chip:#1c2231; --table-stripe:#141a25; --ring:#1d2a42;
       --grad:linear-gradient(135deg,#8b5cf6 0%,#00bcd4 100%);
     }
     *{box-sizing:border-box}
-    body{margin:0;padding:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;background:var(--bg);color:var(--text)}
-    .hero{background:var(--grad);color:#fff;padding:20px 16px}
-    .container{max-width:1120px;margin:0 auto;padding:0 12px}
-    header{display:flex;align-items:center;gap:12px}
-    h1{font-size:20px;margin:0;font-weight:650;letter-spacing:.2px}
-    .tag{opacity:.85;border:1px solid rgba(255,255,255,.25);padding:4px 10px;border-radius:999px;font-size:12px}
+    html,body{height:100%}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;background:var(--bg);color:var(--text)}
+
+    /* ======= HERO / HEADER ======= */
+    .hero{background:var(--grad); color:#fff; padding:18px 16px 72px}
+    .container{max-width:1120px; margin:0 auto; padding:0 14px}
+    header{display:flex; align-items:center; gap:10px}
+    h1{font-size:20px; margin:0; font-weight:700; letter-spacing:.2px}
     .spacer{flex:1}
-    .toggle{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:transparent;color:#fff;cursor:pointer}
-    .dot{width:10px;height:10px;border-radius:999px;background:#fff;opacity:.9}
+    .round{display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; border-radius:999px; border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.08); cursor:pointer}
+    .round svg{width:18px; height:18px; fill:#fff}
+    .tag{opacity:.92; border:1px solid rgba(255,255,255,.25); padding:6px 10px; border-radius:999px; font-size:12px}
 
-    main{margin-top:-18px;padding-bottom:28px}
-    .card{background:var(--card);border:1px solid var(--border);box-shadow:var(--shadow);border-radius:14px;padding:14px}
-    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-    select,input,button{font:inherit;border:1px solid var(--border);background:var(--card);color:var(--text);padding:10px 12px;border-radius:12px}
-    .btn{cursor:pointer}
-    .btn-primary{background:var(--primary);border-color:transparent;color:var(--primary-contrast)}
-    .pill{display:inline-flex;gap:6px;align-items:center;padding:6px 10px;border:1px solid var(--border);border-radius:999px;background:var(--chip);font-size:12px}
-    .status{font-size:12px;color:var(--muted)}
+    /* ======= CARD SHELL ======= */
+    main{margin-top:-44px; padding-bottom:80px}
+    .card{background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow)}
+
+    /* ======= PERIOD BAR (chips) ======= */
+    .bar{margin:0 14px}
+    .period{display:flex; gap:10px; align-items:center; padding:12px; overflow:auto}
+    .chip{flex:0 0 auto; padding:10px 14px; border-radius:999px; border:1px solid var(--border); background:var(--card); color:var(--text); cursor:pointer; font-weight:600}
+    .chip[aria-pressed="true"]{ background:var(--primary); color:var(--primary-contrast); border-color:transparent }
+    .search{margin-left:auto; min-width:160px}
+    .search input{width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:var(--card); color:var(--text)}
+
+    /* ======= KPI GRID ======= */
+    .kpis{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; padding:12px 12px 14px}
+    .kpi{padding:16px; text-align:center}
+    .kpi h2{margin:0; font-size:30px}
+    .kpi p{margin:6px 0 0; color:var(--muted)}
+    @media (max-width:900px){ .kpis{grid-template-columns:repeat(2,minmax(0,1fr))} }
+    @media (max-width:560px){ .kpis{grid-template-columns:1fr} }
+
+    /* ======= CREATOR LIST (mobile cards) ======= */
+    .list{padding:2px 12px 12px; display:grid; gap:10px}
+    .creator{padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--card)}
+    .creator .top{display:flex; align-items:center; gap:10px}
+    .badge{margin-left:auto; font-weight:700; padding:6px 10px; background:var(--chip); border:1px solid var(--border); border-radius:999px}
+    .handle{font-weight:700}
     .muted{color:var(--muted)}
-    .right{margin-left:auto}
+    .mrow{display:flex; gap:8px; margin-top:10px}
+    .metric{flex:1; background:var(--head); border:1px solid var(--border); border-radius:12px; padding:10px; text-align:center}
+    .metric b{display:block; font-size:18px}
+    .bar{margin-top:8px}
+    .prog{height:10px; background:var(--head); border:1px solid var(--border); border-radius:999px; overflow:hidden}
+    .prog > i{display:block; height:100%; background:var(--primary)}
 
-    .kpis{display:grid;gap:12px;margin-top:12px;grid-template-columns:repeat(4,minmax(0,1fr))}
-    @media (max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media (max-width:560px){.kpis{grid-template-columns:1fr}}
-    .kpi{text-align:center;padding:18px}
-    .kpi h2{margin:0;font-size:30px}
-    .kpi p{margin:6px 0 0;color:var(--muted)}
+    /* ======= DESKTOP TABLE ======= */
+    @media (min-width:1000px){
+      .tablewrap{margin:12px; border:1px solid var(--border); border-radius:14px; overflow:auto}
+      table{width:100%; border-collapse:collapse; min-width:780px; background:var(--card)}
+      th,td{padding:12px 14px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap}
+      th{background:var(--head)}
+      tbody tr:nth-child(even){background:var(--table-stripe)}
+    }
 
-    .table-wrap{margin-top:12px;overflow:auto;border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:var(--shadow)}
-    table{width:100%;border-collapse:collapse;min-width:720px}
-    th,td{padding:12px 14px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
-    th{background:var(--head);position:sticky;top:0;z-index:1}
-    tbody tr:nth-child(even){background:var(--table-stripe)}
+    /* ======= FLOAT ACTIONS ======= */
+    .fab{position:fixed; right:16px; bottom:16px; display:flex; gap:10px}
+    .btn{display:inline-flex; align-items:center; gap:8px; padding:12px 14px; border-radius:12px; border:1px solid var(--border); background:var(--card); color:var(--text); cursor:pointer; box-shadow:var(--shadow)}
+    .btn-primary{background:var(--primary); color:var(--primary-contrast); border-color:transparent}
 
-    /* datas personalizadas (escondidas até escolher) */
-    .custom{display:none;gap:8px;align-items:center}
-    .custom.show{display:flex}
+    /* ======= BOTTOM SHEET (custom period) ======= */
+    .sheet{position:fixed; left:0; right:0; bottom:-100%; background:var(--card); border-top:1px solid var(--border); box-shadow:0 -24px 48px rgba(0,0,0,.2); border-top-left-radius:16px; border-top-right-radius:16px; transition:bottom .25s ease; z-index:20}
+    .sheet.show{bottom:0}
+    .sheet .in{padding:16px}
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .input{flex:1}
+    .input input{width:100%; padding:12px; border-radius:12px; border:1px solid var(--border); background:var(--card); color:var(--text)}
+
+    /* ======= STATUS ======= */
+    .status{font-size:12px; color:var(--muted); padding:8px 14px}
   </style>
 </head>
 <body>
+  <!-- HERO / HEADER -->
   <section class="hero">
     <div class="container">
       <header>
-        <h1>RastroO — Dashboard</h1>
+        <h1>RastroO — <strong>V4</strong></h1>
         <span id="apiBase" class="tag">API</span>
         <div class="spacer"></div>
-        <button id="themeToggle" class="toggle" aria-label="Alternar tema">
-          <span class="dot"></span><span id="themeLabel">Modo escuro</span>
+        <button id="refreshBtn" class="round" title="Atualizar">
+          <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.9 9.2 1 1 0 1 0-2-.4 6 6 0 1 1-5.9-6.8c1.6 0 3.06.62 4.17 1.63L14 10h6V4l-2.35 2.35z"/></svg>
+        </button>
+        <button id="themeToggle" class="round" title="Tema claro/escuro">
+          <svg viewBox="0 0 24 24"><path d="M12 3a1 1 0 0 0-1 1v1a1 1 0 1 0 2 0V4a1 1 0 0 0-1-1zm0 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm7-6a1 1 0 0 0 1-1h1a1 1 0 1 0 0-2h-1a1 1 0 1 0-2 0 1 1 0 0 0 1 1zm-7 8a1 1 0 0 0-1 1v1a1 1 0 1 0 2 0v-1a1 1 0 0 0-1-1zM4 12a1 1 0 0 0 1-1 1 1 0 1 0-2 0H2a1 1 0 1 0 0 2h1a1 1 0 0 0 1-1zm1.64-6.36a1 1 0 0 0-1.41 1.41l.71.7a1 1 0 0 0 1.42-1.41l-.72-.7zM17.66 17.66a1 1 0 0 0 1.41 0l.71-.71a1 1 0 0 0-1.41-1.41l-.71.71a1 1 0 0 0 0 1.41zM17.66 7.05a1 1 0 0 0 1.41-1.41l-.71-.71a1 1 0 1 0-1.41 1.41l.71.71zM6.34 17.66l.71-.71a1 1 0 1 0-1.41-1.41l-.71.71a1 1 0 1 0 1.41 1.41z"/></svg>
         </button>
       </header>
     </div>
   </section>
 
   <main class="container">
-    <section class="card" style="margin-top:10px">
-      <div class="toolbar">
-        <!-- ÚNICO SELETOR DE PERÍODO -->
-        <label class="pill" style="background:transparent;border-color:var(--border)">
-          Período&nbsp;
-          <select id="period">
-            <option value="today">Hoje</option>
-            <option value="7d" selected>Últimos 7 dias</option>
-            <option value="15d">Últimos 15 dias</option>
-            <option value="30d">Últimos 30 dias</option>
-            <option value="custom">Personalizado…</option>
-          </select>
-        </label>
-
-        <!-- Só aparece para “Personalizado” -->
-        <div id="customBox" class="custom">
-          <label>De: <input type="date" id="from"></label>
-          <label>Até: <input type="date" id="to"></label>
-          <button id="applyCustom" class="btn btn-primary">Aplicar</button>
+    <!-- PERIOD & SEARCH on a nice card -->
+    <section class="card" style="margin-top:-28px; padding-top:10px;">
+      <div class="period">
+        <button class="chip" data-p="today" aria-pressed="false">Hoje</button>
+        <button class="chip" data-p="7d" aria-pressed="true">7 dias</button>
+        <button class="chip" data-p="15d" aria-pressed="false">15 dias</button>
+        <button class="chip" data-p="30d" aria-pressed="false">30 dias</button>
+        <button class="chip" id="chipCustom" data-p="custom" aria-pressed="false">Personalizado</button>
+        <div class="search" style="flex:1; max-width:260px">
+          <input id="filter" placeholder="Filtrar creator (@mateus)">
         </div>
-
-        <input id="filter" placeholder="Filtrar creator (@mateus)" style="min-width:220px">
-        <button id="btnCsv" class="btn">Exportar CSV</button>
-
-        <label class="pill" style="background:transparent;border-color:var(--border)">
-          <input type="checkbox" id="auto" style="margin-right:6px"> Auto-refresh (30s)
-        </label>
-
-        <button id="btnAll" class="btn">Ver Tudo</button>
-        <span id="status" class="right status">…</span>
       </div>
-      <div id="lastFetch" class="status" style="margin-top:6px"></div>
+      <div id="status" class="status">…</div>
     </section>
 
-    <section class="kpis">
-      <div class="card kpi"><h2 id="kHits">0</h2><p>Hits</p></div>
-      <div class="card kpi"><h2 id="kLeads">0</h2><p>Leads</p></div>
-      <div class="card kpi"><h2 id="kSales">0</h2><p>Vendas</p></div>
-      <div class="card kpi"><h2 id="kRev">R$ 0,00</h2><p>Receita</p></div>
+    <!-- KPIs -->
+    <section class="card" style="margin-top:10px">
+      <div class="kpis">
+        <div class="kpi"><h2 id="kHits">0</h2><p>Hits</p></div>
+        <div class="kpi"><h2 id="kLeads">0</h2><p>Leads</p></div>
+        <div class="kpi"><h2 id="kSales">0</h2><p>Vendas</p></div>
+        <div class="kpi"><h2 id="kRev">R$ 0,00</h2><p>Receita</p></div>
+      </div>
     </section>
 
-    <section class="table-wrap">
+    <!-- LIST (mobile) -->
+    <section class="card" style="margin-top:10px">
+      <div class="list" id="list"></div>
+    </section>
+
+    <!-- TABLE (desktop only) -->
+    <section class="tablewrap card" style="margin-top:10px; display:none" id="tableWrap">
       <table>
         <thead>
           <tr>
-            <th>Creator</th><th>Hits</th><th>Leads</th><th>Vendas</th>
-            <th>CR H→L</th><th>CR L→V</th><th>Receita</th>
+            <th>Creator</th><th>Hits</th><th>Leads</th><th>Vendas</th><th>CR H→L</th><th>CR L→V</th><th>Receita</th>
           </tr>
         </thead>
-        <tbody id="tbody">
-          <tr><td colspan="7" class="muted">Carregando…</td></tr>
-        </tbody>
+        <tbody id="tbody"></tbody>
       </table>
     </section>
 
-    <p id="error" class="status" style="margin-top:10px;color:#ff6b6b"></p>
+    <div id="lastFetch" class="status"></div>
   </main>
 
+  <!-- FLOAT BUTTONS -->
+  <div class="fab">
+    <button class="btn" id="autoBtn" title="Auto-refresh 30s">
+      <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 6v3l4-4-4-4v3C7.6 4 4 7.6 4 12s3.6 8 8 8 8-3.6 8-8h-2c0 3.3-2.7 6-6 6s-6-2.7-6-6 2.7-6 6-6z"/></svg>
+      <span id="autoLabel">Auto OFF</span>
+    </button>
+    <button class="btn btn-primary" id="csvBtn" title="Exportar CSV">
+      <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18h14v2H5z"/></svg>
+      CSV
+    </button>
+  </div>
+
+  <!-- BOTTOM SHEET: Custom Period -->
+  <div class="sheet" id="sheet">
+    <div class="in">
+      <h3 style="margin:0 0 10px">Período personalizado</h3>
+      <div class="row">
+        <div class="input"><label>De:<br><input type="date" id="from"></label></div>
+        <div class="input"><label>Até:<br><input type="date" id="to"></label></div>
+      </div>
+      <div class="row" style="margin-top:12px; justify-content:flex-end">
+        <button class="btn" id="cancelSheet">Cancelar</button>
+        <button class="btn btn-primary" id="applySheet">Aplicar</button>
+      </div>
+    </div>
+  </div>
+
 <script>
-  // ================= CONFIG =================
-  const API = location.origin;
+  // ========= CONFIG =========
+  const API = location.origin; // mesma origem do painel
   document.getElementById('apiBase').textContent = API.replace(/^https?:\/\//,'');
 
-  // =============== THEME (toggle + memória) ===============
+  // ========= THEME =========
   const themeKey='rastroo_theme';
   const prefersDark = matchMedia('(prefers-color-scheme: dark)').matches;
-  const saved = localStorage.getItem(themeKey);
-  function applyTheme(mode){
-    document.documentElement.setAttribute('data-theme', mode);
-    document.getElementById('themeLabel').textContent = (mode==='dark'?'Modo claro':'Modo escuro');
-    localStorage.setItem(themeKey, mode);
-  }
-  applyTheme(saved || (prefersDark?'dark':'light'));
-  document.getElementById('themeToggle').onclick=()=>applyTheme(
-    document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark'
-  );
+  function applyTheme(mode){ document.documentElement.setAttribute('data-theme', mode); localStorage.setItem(themeKey, mode); }
+  applyTheme(localStorage.getItem(themeKey) || (prefersDark?'dark':'light'));
+  document.getElementById('themeToggle').onclick=()=>{
+    const t=document.documentElement.getAttribute('data-theme');
+    applyTheme(t==='dark'?'light':'dark');
+  };
 
-  // =============== HELPERS =================
-  let lastData=null, timer=null;
+  // ========= STATE =========
+  let lastData=null, autoTimer=null; let currentPeriod='7d'; let customRange=null;
+
   const fmtMoney=v=>(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
   const ymd=d=>{const z=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())};
   function rangeQuick(key){
@@ -165,109 +214,134 @@
     else if(key==='30d'){ start.setDate(start.getDate()-29); }
     return {from: ymd(start), to: ymd(end)};
   }
-  function setStatus(s){ document.getElementById('status').textContent=s; }
-  function setLast(u){ document.getElementById('lastFetch').textContent='Fetch: '+u; }
-  function setError(m){ document.getElementById('error').textContent=m||''; }
 
-  async function loadReport(from,to){
+  // ========= FETCH =========
+  async function loadReport(){
+    let from, to;
+    if(currentPeriod==='custom' && customRange){({from,to}=customRange)}
+    else {({from,to}=rangeQuick(currentPeriod))}
+
     const url=`${API}/api/report?from=${from}&to=${to}`;
-    setStatus('Carregando…'); setLast(url); setError('');
+    setStatus('Carregando…'); setLast(url);
     try{
       const r=await fetch(url,{cache:'no-store'});
       if(!r.ok) throw new Error('HTTP '+r.status);
       const j=await r.json();
       if(!j.ok) throw new Error('API ok=false');
       lastData=j; render(); setStatus('OK ✅');
-    }catch(e){ setError('Falha ao carregar: '+e.message); setStatus('Erro ❌'); }
+    }catch(e){ setStatus('Erro ❌'); console.error(e); }
   }
 
-  function render(){
-    if(!lastData) return;
-    document.getElementById('kHits').textContent=lastData.summary.hits||0;
-    document.getElementById('kLeads').textContent=lastData.summary.leads||0;
-    document.getElementById('kSales').textContent=lastData.summary.sales||0;
-    document.getElementById('kRev').textContent=fmtMoney(lastData.summary.revenue||0);
+  function setStatus(s){ document.getElementById('status').textContent=s; }
+  function setLast(u){ document.getElementById('lastFetch').textContent='Fetch: '+u; }
 
+  // ========= RENDER =========
+  function render(){ if(!lastData) return;
+    // KPIs
+    k('kHits', lastData.summary.hits||0);
+    k('kLeads', lastData.summary.leads||0);
+    k('kSales', lastData.summary.sales||0);
+    document.getElementById('kRev').textContent = fmtMoney(lastData.summary.revenue||0);
+
+    // Cards (mobile)
+    const list=document.getElementById('list');
     const filt=(document.getElementById('filter').value||'').trim().toLowerCase();
-    const rows=(lastData.perCreator||[])
-      .filter(r=>!filt||(r.creator||'').toLowerCase().includes(filt))
-      .sort((a,b)=>(b.hits||0)-(a.hits||0));
+    const rows=(lastData.perCreator||[]).filter(r=>!filt||(r.creator||'').toLowerCase().includes(filt))
+                                       .sort((a,b)=>(b.hits||0)-(a.hits||0));
+    list.innerHTML='';
+    for(const r of rows){
+      const hits=r.hits||0, leads=r.leads||0, sales=r.sales||0, rev=Number(r.revenue||0);
+      const crHL = hits? Math.round((leads/hits)*100):0;
+      const crLV = leads? Math.round((sales/leads)*100):0;
+      const card=document.createElement('div'); card.className='creator';
+      card.innerHTML=`
+        <div class="top"><div class="handle">${escapeHtml(r.creator||'—')}</div>
+          <div class="badge">${fmtMoney(rev)}</div></div>
+        <div class="mrow">
+          <div class="metric"><span class="muted">Hits</span><b>${hits}</b></div>
+          <div class="metric"><span class="muted">Leads</span><b>${leads}</b></div>
+          <div class="metric"><span class="muted">Vendas</span><b>${sales}</b></div>
+        </div>
+        <div class="mrow" style="margin-top:8px">
+          <div class="metric" style="flex:1"><span class="muted">CR H→L</span>
+            <div class="prog"><i style="width:${Math.min(crHL,100)}%"></i></div>
+          </div>
+          <div class="metric" style="flex:1"><span class="muted">CR L→V</span>
+            <div class="prog"><i style="width:${Math.min(crLV,100)}%"></i></div>
+          </div>
+        </div>`;
+      list.appendChild(card);
+    }
 
-    const tb=document.getElementById('tbody');
-    tb.innerHTML=rows.length?'':`<tr><td colspan="7" class="muted">Sem dados para o período.</td></tr>`;
+    // Table (desktop)
+    const wrap=document.getElementById('tableWrap');
+    wrap.style.display = window.matchMedia('(min-width: 1000px)').matches ? 'block' : 'none';
+    const tb=document.getElementById('tbody'); tb.innerHTML='';
     for(const r of rows){
       const tr=document.createElement('tr');
-      tr.innerHTML=`
-        <td>${r.creator||'—'}</td>
-        <td>${r.hits||0}</td>
-        <td>${r.leads||0}</td>
-        <td>${r.sales||0}</td>
-        <td>${(r.cr_h_to_l||0)}%</td>
-        <td>${(r.cr_l_to_v||0)}%</td>
+      tr.innerHTML = `<td>${escapeHtml(r.creator||'—')}</td>
+        <td>${r.hits||0}</td><td>${r.leads||0}</td><td>${r.sales||0}</td>
+        <td>${(r.cr_h_to_l||0)}%</td><td>${(r.cr_l_to_v||0)}%</td>
         <td>${fmtMoney(r.revenue||0)}</td>`;
       tb.appendChild(tr);
     }
   }
 
-  function exportCsv(){
+  function k(id,v){ document.getElementById(id).textContent=v }
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])) }
+
+  // ========= PERIOD CHIPS =========
+  const chips=[...document.querySelectorAll('.chip[data-p]')];
+  function setPeriod(p){
+    currentPeriod=p; chips.forEach(c=>c.setAttribute('aria-pressed', String(c.dataset.p===p)));
+    if(p!== 'custom') closeSheet();
+    loadReport();
+  }
+  chips.forEach(c=> c.addEventListener('click', ()=>{
+    const p=c.dataset.p; if(p==='custom'){ openSheet(); currentPeriod='custom'; chips.forEach(el=>el.setAttribute('aria-pressed', String(el===c))); return; }
+    setPeriod(p);
+  }));
+
+  // ========= SHEET =========
+  const sheet=document.getElementById('sheet');
+  const chipCustom=document.getElementById('chipCustom');
+  function openSheet(){ sheet.classList.add('show'); presetCustom(); }
+  function closeSheet(){ sheet.classList.remove('show'); }
+  function presetCustom(){
+    // preset com últimos 7 dias
+    const {from,to}=rangeQuick('7d');
+    document.getElementById('from').value=from; document.getElementById('to').value=to;
+  }
+  document.getElementById('applySheet').onclick=()=>{
+    const f=document.getElementById('from').value; const t=document.getElementById('to').value;
+    if(!f||!t){ alert('Defina De e Até.'); return; }
+    customRange={from:f,to:t}; setPeriod('custom'); closeSheet();
+  };
+  document.getElementById('cancelSheet').onclick=()=>{ closeSheet(); chips.find(x=>x.dataset.p===currentPeriod)?.focus(); };
+
+  // ========= SEARCH / CSV =========
+  document.getElementById('filter').addEventListener('input', ()=> render());
+  document.getElementById('csvBtn').onclick=()=>{
     if(!lastData) return;
-    const rows=[['creator','hits','leads','sales','cr_h_to_l','cr_l_to_v','revenue']];
-    for(const r of (lastData.perCreator||[])){
-      rows.push([r.creator||'',r.hits||0,r.leads||0,r.sales||0,(r.cr_h_to_l||0),(r.cr_l_to_v||0),(r.revenue||0)]);
-    }
+    const rows=[[ 'creator','hits','leads','sales','cr_h_to_l','cr_l_to_v','revenue' ]];
+    for(const r of (lastData.perCreator||[])) rows.push([ r.creator||'', r.hits||0, r.leads||0, r.sales||0, (r.cr_h_to_l||0), (r.cr_l_to_v||0), (r.revenue||0) ]);
     const csv=rows.map(a=>a.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
     const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`rastroo-${Date.now()}.csv`; a.click();
-  }
-
-  // =============== UI =================
-  const sel=document.getElementById('period');
-  const customBox=document.getElementById('customBox');
-
-  function applySelector(){
-    const v=sel.value;
-    if(v==='custom'){ customBox.classList.add('show'); return; }
-    customBox.classList.remove('show');
-    const {from,to}=rangeQuick(v);
-    loadReport(from,to);
-  }
-  sel.onchange=applySelector;
-
-  document.getElementById('applyCustom').onclick=()=>{
-    const f=document.getElementById('from').value;
-    const t=document.getElementById('to').value;
-    if(!f||!t) return setError('Defina De e Até.');
-    loadReport(f,t);
   };
 
-  document.getElementById('filter').oninput=render;
-  document.getElementById('btnCsv').onclick=exportCsv;
-  document.getElementById('btnAll').onclick=()=>loadReport('2000-01-01','2099-12-31');
-
-  document.getElementById('auto').onchange=(e)=>{
-    if(e.target.checked){
-      if(timer) clearInterval(timer);
-      timer=setInterval(()=>{
-        const v=sel.value;
-        if(v==='custom'){
-          const f=document.getElementById('from').value;
-          const t=document.getElementById('to').value;
-          if(f&&t) loadReport(f,t);
-        }else{
-          const {from,to}=rangeQuick(v);
-          loadReport(from,to);
-        }
-      },30000);
-    }else if(timer){ clearInterval(timer); timer=null; }
+  // ========= REFRESH =========
+  document.getElementById('refreshBtn').onclick=()=> loadReport();
+  const autoBtn=document.getElementById('autoBtn');
+  const autoLabel=document.getElementById('autoLabel');
+  autoBtn.onclick=()=>{
+    if(autoTimer){ clearInterval(autoTimer); autoTimer=null; autoLabel.textContent='Auto OFF'; autoBtn.classList.remove('btn-primary'); }
+    else { autoTimer=setInterval(loadReport, 30000); autoLabel.textContent='Auto ON'; autoBtn.classList.add('btn-primary'); }
   };
 
-  // init: 7 dias
-  (function init(){
-    const {from,to}=rangeQuick('7d');
-    document.getElementById('from').value=from;
-    document.getElementById('to').value=to;
-    applySelector();
-  })();
+  // ========= INIT =========
+  window.addEventListener('resize', ()=> render());
+  setPeriod('7d'); // first load
 </script>
 </body>
 </html>
