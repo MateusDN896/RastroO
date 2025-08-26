@@ -1,7 +1,7 @@
-// server.js — RastroO (MVP) com CORS *temporário* liberado
-// --------------------------------------------------------
+// server.js — RastroO (MVP) | DB em /tmp (gravável no Render) + CORS aberto
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 const sqlite3 = require('sqlite3').verbose();
 
@@ -9,26 +9,38 @@ const app = express();
 app.set('trust proxy', true);
 app.use(express.json({ limit: '1mb' }));
 
-// Arquivos estáticos (dashboard, snippet.js)
-app.use('/public', express.static(path.join(__dirname, 'public'), {
-  etag: true,
-  maxAge: '1h',
-}));
-
-// --------- CORS (TEMPORÁRIO: libera geral) ---------------
+// --------- CORS (temporário: libera geral) ----------
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*'); // <— libera geral
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
-// --------------------------------------------------------
+// ----------------------------------------------------
 
-// Banco (SQLite)
-const db = new sqlite3.Database(path.join(__dirname, 'rastroo.db'));
+// Arquivos estáticos (dashboard, snippet.js)
+app.use('/public', express.static(path.join(__dirname, 'public'), {
+  etag: true,
+  maxAge: '1h',
+}));
 
+// ===== Banco de dados em diretório gravável =====
+const DATA_DIR = process.env.DATA_DIR || '/tmp/rastroo';
+fs.mkdirSync(DATA_DIR, { recursive: true });
+const DB_PATH = path.join(DATA_DIR, 'rastroo.db');
+
+const db = new sqlite3.Database(DB_PATH, (err) => {
+  if (err) {
+    console.error('Erro ao abrir DB em', DB_PATH, err);
+    process.exit(1);
+  } else {
+    console.log('DB OK em', DB_PATH);
+  }
+});
+
+// Schema
 db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS hits (
@@ -75,7 +87,7 @@ db.serialize(() => {
   `);
 });
 
-// Helpers DB (promises)
+// Helpers DB
 function run(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function (err) {
@@ -95,36 +107,30 @@ const now = () => Date.now();
 function ipHashFromReq(req) {
   const ip =
     (req.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
-    req.socket?.remoteAddress ||
-    '';
+    req.socket?.remoteAddress || '';
   return crypto.createHash('sha256').update(ip).digest('hex').slice(0, 16);
 }
 
-// Rate limit simples para /api/hit (10 hits/min por SID)
+// Rate limit simples pra /api/hit
 const MAX_HITS_PER_MIN = 10;
-const hitBuckets = new Map(); // key = `${sid}:${minute}`, value = count
+const hitBuckets = new Map(); // `${sid}:${minute}` -> count
 
-// ------------------ ROTAS API ----------------------------
-
-// Healthcheck
+// ---------- Rotas ----------
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, time: new Date().toISOString() });
 });
 
-// HIT
 app.post('/api/hit', async (req, res) => {
   try {
     const b = req.body || {};
-    const pagePath = String(b.path || '');
-    const referrer = String(b.referrer || '');
     const sid = String(b.sid || '');
     const creator = String(b.creator || 'desconhecido');
     const utm = b.utm || {};
+    const pagePath = String(b.path || '');
+    const referrer = String(b.referrer || '');
     const ipHash = ipHashFromReq(req);
 
-    // rate limit
-    const minuteKey =
-      (sid || ipHash) + ':' + Math.floor(now() / 60000).toString();
+    const minuteKey = (sid || ipHash) + ':' + Math.floor(now() / 60000);
     const n = hitBuckets.get(minuteKey) || 0;
     if (n >= MAX_HITS_PER_MIN) return res.sendStatus(204);
     hitBuckets.set(minuteKey, n + 1);
@@ -133,16 +139,9 @@ app.post('/api/hit', async (req, res) => {
       `INSERT INTO hits (ts, creator, sid, path, referrer, ip_hash, utm_source, utm_medium, utm_campaign)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        now(),
-        creator,
-        sid,
-        pagePath,
-        referrer,
-        ipHash,
-        String(utm.source || ''),
-        String(utm.medium || ''),
-        String(utm.campaign || ''),
-      ],
+        now(), creator, sid, pagePath, referrer, ipHash,
+        String(utm.source || ''), String(utm.medium || ''), String(utm.campaign || '')
+      ]
     );
     res.json({ ok: true });
   } catch (e) {
@@ -151,7 +150,6 @@ app.post('/api/hit', async (req, res) => {
   }
 });
 
-// LEAD
 app.post('/api/lead', async (req, res) => {
   try {
     const b = req.body || {};
@@ -166,16 +164,9 @@ app.post('/api/lead', async (req, res) => {
       `INSERT INTO leads (ts, creator, sid, email, name, ip_hash, utm_source, utm_medium, utm_campaign)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        now(),
-        creator,
-        sid,
-        email,
-        name,
-        ipHash,
-        String(utm.source || ''),
-        String(utm.medium || ''),
-        String(utm.campaign || ''),
-      ],
+        now(), creator, sid, email, name, ipHash,
+        String(utm.source || ''), String(utm.medium || ''), String(utm.campaign || '')
+      ]
     );
     res.json({ ok: true });
   } catch (e) {
@@ -184,7 +175,6 @@ app.post('/api/lead', async (req, res) => {
   }
 });
 
-// SALE
 app.post('/api/sale', async (req, res) => {
   try {
     const b = req.body || {};
@@ -200,17 +190,9 @@ app.post('/api/sale', async (req, res) => {
       `INSERT OR IGNORE INTO sales (ts, creator, sid, order_id, amount, currency, ip_hash, utm_source, utm_medium, utm_campaign)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        now(),
-        creator,
-        sid,
-        orderId,
-        amount,
-        currency,
-        ipHash,
-        String(utm.source || ''),
-        String(utm.medium || ''),
-        String(utm.campaign || ''),
-      ],
+        now(), creator, sid, orderId, amount, currency, ipHash,
+        String(utm.source || ''), String(utm.medium || ''), String(utm.campaign || '')
+      ]
     );
     res.json({ ok: true });
   } catch (e) {
@@ -219,58 +201,29 @@ app.post('/api/sale', async (req, res) => {
   }
 });
 
-// REPORT
 app.get('/api/report', async (req, res) => {
   try {
-    const from =
-      req.query.from ?
-        new Date(req.query.from + 'T00:00:00Z').getTime() :
-        0;
-    const to =
-      req.query.to ?
-        new Date(req.query.to + 'T23:59:59Z').getTime() :
-        now();
+    const from = req.query.from ? new Date(req.query.from + 'T00:00:00Z').getTime() : 0;
+    const to   = req.query.to   ? new Date(req.query.to   + 'T23:59:59Z').getTime() : now();
 
-    const hits = await all(
-      `SELECT creator, COUNT(*) as n FROM hits WHERE ts BETWEEN ? AND ? GROUP BY creator`,
-      [from, to],
-    );
-    const leads = await all(
-      `SELECT creator, COUNT(*) as n FROM leads WHERE ts BETWEEN ? AND ? GROUP BY creator`,
-      [from, to],
-    );
-    const sales = await all(
-      `SELECT creator, COUNT(*) as n, SUM(amount) as revenue FROM sales WHERE ts BETWEEN ? AND ? GROUP BY creator`,
-      [from, to],
-    );
+    const hits  = await all(`SELECT creator, COUNT(*) as n FROM hits  WHERE ts BETWEEN ? AND ? GROUP BY creator`, [from, to]);
+    const leads = await all(`SELECT creator, COUNT(*) as n FROM leads WHERE ts BETWEEN ? AND ? GROUP BY creator`, [from, to]);
+    const sales = await all(`SELECT creator, COUNT(*) as n, SUM(amount) as revenue FROM sales WHERE ts BETWEEN ? AND ? GROUP BY creator`, [from, to]);
 
     const map = new Map();
-    for (const r of hits) map.set(r.creator, { creator: r.creator, hits: r.n, leads: 0, sales: 0, revenue: 0 });
-    for (const r of leads) {
-      const m = map.get(r.creator) || { creator: r.creator, hits: 0, leads: 0, sales: 0, revenue: 0 };
-      m.leads = r.n; map.set(r.creator, m);
-    }
-    for (const r of sales) {
-      const m = map.get(r.creator) || { creator: r.creator, hits: 0, leads: 0, sales: 0, revenue: 0 };
-      m.sales = r.n; m.revenue = Number(r.revenue || 0); map.set(r.creator, m);
-    }
+    for (const r of hits)  map.set(r.creator, { creator: r.creator, hits: r.n, leads: 0, sales: 0, revenue: 0 });
+    for (const r of leads) { const m = map.get(r.creator) || { creator: r.creator, hits: 0, leads: 0, sales: 0, revenue: 0 }; m.leads = r.n; map.set(r.creator, m); }
+    for (const r of sales) { const m = map.get(r.creator) || { creator: r.creator, hits: 0, leads: 0, sales: 0, revenue: 0 }; m.sales = r.n; m.revenue = Number(r.revenue || 0); map.set(r.creator, m); }
 
-    const perCreator = Array.from(map.values()).map((r) => ({
+    const perCreator = Array.from(map.values()).map(r => ({
       ...r,
-      cr_h_to_l: r.hits ? +(r.leads / r.hits * 100).toFixed(2) : 0,
+      cr_h_to_l: r.hits  ? +(r.leads / r.hits  * 100).toFixed(2) : 0,
       cr_l_to_v: r.leads ? +(r.sales / r.leads * 100).toFixed(2) : 0,
     }));
 
-    const summary = perCreator.reduce(
-      (acc, r) => {
-        acc.hits += r.hits;
-        acc.leads += r.leads;
-        acc.sales += r.sales;
-        acc.revenue += r.revenue;
-        return acc;
-      },
-      { hits: 0, leads: 0, sales: 0, revenue: 0 },
-    );
+    const summary = perCreator.reduce((a, r) => {
+      a.hits += r.hits; a.leads += r.leads; a.sales += r.sales; a.revenue += r.revenue; return a;
+    }, { hits: 0, leads: 0, sales: 0, revenue: 0 });
 
     res.json({ ok: true, summary, perCreator });
   } catch (e) {
@@ -279,13 +232,11 @@ app.get('/api/report', async (req, res) => {
   }
 });
 
-// Redireciona raiz para o dashboard
+// Raiz -> dashboard
 app.get('/', (req, res) => {
   res.redirect('/public/dashboard.html');
 });
 
-// Sobe o servidor
+// Start
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log('RastroO rodando na porta', PORT);
-});
+app.listen(PORT, () => console.log('RastroO rodando na porta', PORT));
