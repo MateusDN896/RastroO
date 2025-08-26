@@ -1,5 +1,6 @@
 // server.js — RastroO (DN) — API + Snippet + Dashboard API + Instagram Webhooks
 // + Link Builder com suporte a user=@username (último comentário)
+// + Creator para LEAD/SALE = @username (iu)
 // Cole inteiro e faça deploy no Render.
 
 const express = require('express');
@@ -94,7 +95,7 @@ function summarize(events, from, to){
 
 // ---------------- Snippet cliente ----------------
 const SNIPPET_JS = `
-// RastroO snippet (grava hit/lead/sale e carrega UTM/vid)
+// RastroO snippet (grava hit/lead/sale e carrega UTM/vid/iu)
 (function(){
   var API = (window.RASTROO_API || location.origin).replace(/\\/$/,'');
   var LS = 'rastroo_attr', once=false;
@@ -106,17 +107,26 @@ const SNIPPET_JS = `
 
   (function init(){
     var a=load(), q=qs(), ch=false;
-    ['r','utm_source','utm_medium','utm_campaign','utm_term','utm_content','vid','vurl','vh'].forEach(k=>{
+    // inclui 'iu' (instagram username do contato) além do que já tínhamos
+    ['r','utm_source','utm_medium','utm_campaign','utm_term','utm_content','vid','vurl','vh','iu'].forEach(function(k){
       if(q[k]){ a[k]=q[k]; ch=true; }
     });
     if(ch) save(a);
     if(!once){ once=true; send('hit', {}); }
   })();
 
+  function chooseCreator(a, type, override){
+    if (override && override.creator) return override.creator;
+    // Para LEAD/SALE: prioriza @ do usuário (iu); para HIT mantém a lógica antiga
+    if (type === 'lead' || type === 'sale') return a.iu || a.vh || a.r || '—';
+    return a.vh || a.r || a.iu || '—';
+  }
+
   function send(type, payload){
     var a=load(), body=Object.assign({}, payload||{});
     body.type = type;
-    body.creator = body.creator || a.vh || a.r || '—';
+    body.creator = chooseCreator(a, type, body);
+    // meta leva tudo, inclusive iu (username do contato) e r (dono/campanha)
     body.meta = Object.assign({ path: path() }, a, body.meta||{});
     fetch(API + '/api/event', {
       method: 'POST',
@@ -261,7 +271,7 @@ app.get('/go', (req,res)=>{
 
 // ---------------- Static & rotas base ----------------
 app.use('/public', express.static(path.join(__dirname, 'public'), { maxAge: 0 }));
-app.get('/', (_req,res)=> res.redirect('/public/dashboard.html')); // dashboard.html redireciona pra v2
+app.get('/', (_req,res)=> res.redirect('/public/dashboard.html')); // dashboard.html pode redirecionar para v2
 
 // ---------------- Start ----------------
 const PORT = process.env.PORT || 3000;
