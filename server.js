@@ -1,5 +1,6 @@
-// server.js — RastroO (DN) — API + Snippet + Dashboard API + Instagram Webhooks + Link Builder
-// Basta colar este arquivo inteiro no seu repositório e fazer deploy no Render.
+// server.js — RastroO (DN) — API + Snippet + Dashboard API + Instagram Webhooks
+// + Link Builder com suporte a user=@username (último comentário)
+// Cole inteiro e faça deploy no Render.
 
 const express = require('express');
 const path = require('path');
@@ -30,7 +31,8 @@ app.use((req, res, next) => {
 const DB = {
   events: [],      // { ts, type:'hit'|'lead'|'sale', creator, amount?, meta:{} }
   igEvents: [],    // eventos brutos do IG (webhook)
-  comments: {}     // comment_id -> media_id
+  comments: {},    // comment_id -> media_id
+  userLast: {}     // username -> { comment_id, media_id, ts }
 };
 
 // ---------------- Helpers ----------------
@@ -183,13 +185,19 @@ app.post('/ig/webhook', (req,res)=>{
     const data = req.body || {};
     DB.igEvents.push({ ts: Date.now(), data });
 
-    // Mapeia comment_id -> media_id quando vier no payload
+    // Mapeia comment_id -> media_id e último por username
     if (Array.isArray(data.entry)) {
-      for (const entry of data.entry) {
+      for (const entry of (data.entry||[])) {
         for (const ch of (entry.changes||[])) {
           if (ch.field === 'comments' || ch.field === 'instagram_comments') {
             const v = ch.value || {};
             if (v.id && v.media_id) DB.comments[v.id] = v.media_id;
+
+            // username pode vir em value.username ou value.from.username (depende da versão)
+            const uname = (v.username || (v.from && v.from.username) || '').replace(/^@/,'');
+            if (uname) {
+              DB.userLast[uname] = { comment_id: v.id, media_id: v.media_id, ts: Date.now() };
+            }
           }
         }
       }
@@ -198,58 +206,62 @@ app.post('/ig/webhook', (req,res)=>{
   res.sendStatus(200);
 });
 
-// Debug para ver último evento IG recebido
+// Debug IG
 app.get('/api/ig/last', (_req,res)=>{
   res.json({
     ok:true,
     total: DB.igEvents.length,
     last: DB.igEvents.slice(-1)[0] || null,
-    mapSize: Object.keys(DB.comments).length
+    mapSize: Object.keys(DB.comments).length,
+    usersTracked: Object.keys(DB.userLast).length
   });
 });
 
-// Ver mapa comment_id -> media_id
-app.get('/api/ig/map', (_req,res)=>{
-  res.json({ ok:true, map: DB.comments, total: Object.keys(DB.comments).length });
+// Ver mapas
+app.get('/api/ig/map', (_req,res)=> res.json({ ok:true, map: DB.comments, total: Object.keys(DB.comments).length }));
+app.get('/api/ig/user-last', (req,res)=>{
+  const u = (req.query.u||'').replace(/^@/,'');
+  res.json({ ok:true, user:u, last: u ? (DB.userLast[u]||null) : null });
 });
 
-// Constrói link com ?vid a partir de comment_id OU media_id
-// Ex.: /api/ig/build?comment_id=178...&base=https://896.xpages.co&utm_source=ig_dm&r=@dn
+// Constrói link com ?vid a partir de comment_id OU media_id OU user=@username
+// Ex.: /api/ig/build?user=mateusdn&base=https://896.xpages.co&utm_source=ig_dm&r=@dn
 const BASE_DEFAULT = 'https://896.xpages.co';
-app.get('/api/ig/build', (req,res)=>{
-  const base = req.query.base || BASE_DEFAULT;
-  let vid = req.query.media_id || '';
-  if (!vid && req.query.comment_id) {
-    vid = DB.comments[req.query.comment_id] || '';
+function buildUrlFromReq(q){
+  const base = q.base || BASE_DEFAULT;
+  let vid = q.media_id || '';
+
+  if (!vid && q.comment_id) {
+    vid = DB.comments[q.comment_id] || '';
   }
-  if (!vid) {
-    return res.status(404).json({ ok:false, error:'not_found', hint:'Envie comment_id ou media_id (o webhook precisa ter recebido esse comment antes).' });
+  if (!vid && q.user) {
+    const u = String(q.user||'').replace(/^@/,'');
+    if (u && DB.userLast[u]) vid = DB.userLast[u].media_id || '';
   }
+
   const u = new URL(base);
-  if (!u.searchParams.has('vid')) u.searchParams.set('vid', vid);
-  if (req.query.utm_source) u.searchParams.set('utm_source', req.query.utm_source);
-  if (req.query.r) u.searchParams.set('r', req.query.r);
-  return res.json({ ok:true, url: u.toString(), vid });
+  if (vid) u.searchParams.set('vid', vid);
+  if (q.utm_source) u.searchParams.set('utm_source', q.utm_source);
+  if (q.r) u.searchParams.set('r', q.r);
+  return { url: u.toString(), vid };
+}
+
+app.get('/api/ig/build', (req,res)=>{
+  const out = buildUrlFromReq(req.query);
+  if (!out.vid) return res.status(404).json({ ok:false, error:'not_found', hint:'Envie comment_id, media_id ou user=@username (o webhook precisa ter visto um comentário desse user).' });
+  return res.json({ ok:true, ...out });
 });
 
 // Atalho que redireciona direto
-// Ex.: /go?comment_id=178...&base=https%3A%2F%2F896.xpages.co&utm_source=ig_dm&r=@dn
+// Ex.: /go?user=@mateusdn&base=https%3A%2F%2F896.xpages.co&utm_source=ig_dm&r=@dn
 app.get('/go', (req,res)=>{
-  const base = req.query.base || BASE_DEFAULT;
-  let vid = req.query.media_id || '';
-  if (!vid && req.query.comment_id) {
-    vid = DB.comments[req.query.comment_id] || '';
-  }
-  const u = new URL(base);
-  if (vid) u.searchParams.set('vid', vid);
-  if (req.query.utm_source) u.searchParams.set('utm_source', req.query.utm_source);
-  if (req.query.r) u.searchParams.set('r', req.query.r);
-  return res.redirect(u.toString());
+  const out = buildUrlFromReq(req.query);
+  return res.redirect(out.url);
 });
 
 // ---------------- Static & rotas base ----------------
 app.use('/public', express.static(path.join(__dirname, 'public'), { maxAge: 0 }));
-app.get('/', (_req,res)=> res.redirect('/public/dashboard.html')); // sua dashboard.html já redireciona pra v2
+app.get('/', (_req,res)=> res.redirect('/public/dashboard.html')); // dashboard.html redireciona pra v2
 
 // ---------------- Start ----------------
 const PORT = process.env.PORT || 3000;
