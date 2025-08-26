@@ -1,8 +1,9 @@
-// server.js — RastroO (DN) — REMOÇÃO DE HITS + LEAD NA CHEGADA + ETIQUETAS DE LEADS
-// API de eventos + Snippet + Dashboard + IG Webhooks + Reels/Insights + Leads com status
+// server.js — RastroO (DN) — Dashboard (lead-only) + IG Webhooks + Reels/Insights
+// + OAuth Meta (Conectar Instagram) direto no RastroO
 
 const express = require('express');
 const path = require('path');
+const crypto = require('crypto');
 
 const app = express();
 app.set('trust proxy', true);
@@ -26,13 +27,25 @@ app.use((req, res, next) => {
   next();
 });
 
+// --------- ENV (OAuth) ---------
+const IG_APP_ID     = process.env.IG_APP_ID     || '';
+const IG_APP_SECRET = process.env.IG_APP_SECRET || '';
+const IG_REDIRECT   = process.env.IG_REDIRECT   || 'https://trk.rastroo.site/auth/ig/callback';
+
 // --------- “Banco” em memória ---------
 const DB = {
   events: [],      // { ts, type:'lead'|'sale', creator, amount?, meta:{ iu?, vid?, ... } }
   igEvents: [],    // IG webhooks brutos
   comments: {},    // comment_id -> media_id
   userLast: {},    // username -> { comment_id, media_id, ts }
-  leadStatus: {}   // iu -> 'pago' | 'lead' | 'reprovado' (manual)
+  leadStatus: {},  // iu -> 'pago'|'lead'|'reprovado'
+  authStates: new Set(),
+  igCreds: { // credenciais ativas (fallback usa ENV IG_ACCESS_TOKEN/IG_IGID se existirem)
+    token: process.env.IG_ACCESS_TOKEN || '',
+    igid:  process.env.IG_IGID || process.env.IG_USER_ID || '',
+    pageId: '',
+    username: ''
+  }
 };
 
 // --------- Helpers ---------
@@ -99,6 +112,7 @@ function countsByVid(){
   }
   return m;
 }
+function fmtBRL(n){ return (n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 
 // --------- Snippet (toda chegada = LEAD) ---------
 const SNIPPET_JS = `
@@ -116,19 +130,18 @@ const SNIPPET_JS = `
       if(q[k]){ a[k]=q[k]; ch=true; }
     });
     if(ch) save(a);
-    // >>> Agora, cada chegada já conta como LEAD <<<
-    if(!once){ once=true; send('lead', {}); }
+    if(!once){ once=true; send('lead', {}); } // toda visita vira lead
   })();
 
   function chooseCreator(a, type, override){
     if (override && override.creator) return override.creator;
-    // Para LEAD/SALE: prioriza @ do usuário (iu); fallback vh/r
-    return a.iu || a.vh || a.r || '—';
+    return a.iu || a.vh || a.r || '—'; // prioriza @ do usuário
   }
 
   function send(type, payload){
     var a=load(), body=Object.assign({}, payload||{});
-    body.type = (type==='hit') ? 'lead' : type; // compat: se alguém chamar hit, vira lead
+    if (type==='hit') type='lead';
+    body.type = type;
     body.creator = chooseCreator(a, body.type, body);
     body.meta = Object.assign({ path: path() }, a, body.meta||{});
     fetch(API + '/api/event', {
@@ -153,7 +166,7 @@ app.get('/public/snippet.js', (_req,res)=> res.type('application/javascript').se
 // --------- API de eventos ---------
 app.post('/api/event', (req,res)=>{
   let { type, creator } = req.body || {};
-  if (type === 'hit') type = 'lead'; // compat: converte hit -> lead
+  if (type === 'hit') type = 'lead'; // compat
   if (!type || !['lead','sale'].includes(type)) {
     return res.status(400).json({ ok:false, error:'invalid type' });
   }
@@ -180,7 +193,6 @@ app.get('/api/ping', (_req,res)=> res.json({ ok:true, ts: Date.now() }));
 
 // --------- LEADS com etiquetas ---------
 function computeLeadStatus(iu, stats){
-  // prioridade: manual > pago (tem sale) > reprovado manual > lead
   const manual = DB.leadStatus[iu];
   if (manual === 'pago' || manual === 'reprovado' || manual === 'lead') return manual;
   if ((stats.sales||0) > 0) return 'pago';
@@ -212,7 +224,7 @@ app.post('/api/status', (req,res)=>{
   res.json({ ok:true });
 });
 
-// --------- IG Webhooks ---------
+// --------- IG Webhooks (comments) ---------
 const IG_VERIFY_TOKEN = process.env.IG_VERIFY_TOKEN || 'RASTROO_VERIFY';
 app.get('/ig/webhook', (req,res)=>{
   const mode = req.query['hub.mode'];
@@ -279,22 +291,39 @@ app.get('/api/ig/build', (req,res)=>{
 });
 app.get('/go', (req,res)=> res.redirect(buildUrlFromReq(req.query).url));
 
-// --------- Instagram Graph API: Reels + Insights ---------
-const IG_TOKEN = process.env.IG_ACCESS_TOKEN || '';
-const IG_IGID  = process.env.IG_IGID || process.env.IG_USER_ID || '';
+// --------- Instagram Graph API: Reels + Insights (usando credenciais conectadas) ---------
+function activeToken(){ return DB.igCreds.token || process.env.IG_ACCESS_TOKEN || ''; }
+function activeIGID(){ return DB.igCreds.igid  || process.env.IG_IGID       || process.env.IG_USER_ID || ''; }
+
 async function igFetch(path, params={}){
-  if (!IG_TOKEN) throw new Error('IG_ACCESS_TOKEN ausente');
+  const token = activeToken();
+  if (!token) throw new Error('Conta do Instagram não conectada.');
   const url = new URL(`https://graph.facebook.com/v18.0/${path}`);
   for (const [k,v] of Object.entries(params)) url.searchParams.set(k, v);
-  url.searchParams.set('access_token', IG_TOKEN);
+  url.searchParams.set('access_token', token);
   const r = await fetch(url);
   const j = await r.json();
   if (!r.ok) throw new Error((j && j.error && j.error.message) || 'Erro IG');
   return j;
 }
+
+// status das credenciais
+app.get('/api/ig/creds', async (_req,res)=>{
+  const connected = Boolean(activeToken() && activeIGID());
+  res.json({
+    ok:true,
+    connected,
+    igid: activeIGID(),
+    username: DB.igCreds.username || '',
+    token_preview: activeToken() ? (activeToken().slice(0,6)+'…'+activeToken().slice(-4)) : ''
+  });
+});
+
+// lista reels + insights + cruzamento leads/vendas
 app.get('/api/ig/reels', async (req,res)=>{
   try{
-    if (!IG_TOKEN || !IG_IGID) return res.status(400).json({ ok:false, error:'Faltam IG_ACCESS_TOKEN e/ou IG_IGID' });
+    const IGID = activeIGID();
+    if (!activeToken() || !IGID) return res.status(400).json({ ok:false, error:'Conecte sua conta do Instagram em /public/connect.html' });
     const limit = Math.min(parseInt(req.query.limit || '30',10), 50);
 
     const fields = [
@@ -302,7 +331,7 @@ app.get('/api/ig/reels', async (req,res)=>{
       'thumbnail_url','timestamp','like_count','comments_count'
     ].join(',');
 
-    const mediaResp = await igFetch(`${IG_IGID}/media`, { fields, limit: String(limit) });
+    const mediaResp = await igFetch(`${IGID}/media`, { fields, limit: String(limit) });
     const items = (mediaResp.data || []).filter(m =>
       m.media_product_type === 'REELS' || m.media_type === 'VIDEO'
     );
@@ -335,6 +364,114 @@ app.get('/api/ig/reels', async (req,res)=>{
     res.json({ ok:true, total: result.length, items: result });
   }catch(e){
     res.status(500).json({ ok:false, error: e.message || 'Erro interno' });
+  }
+});
+
+// --------- OAuth Meta: login → callback ---------
+function makeState(){
+  const s = crypto.randomBytes(12).toString('hex');
+  DB.authStates.add(s);
+  setTimeout(()=> DB.authStates.delete(s), 10*60*1000);
+  return s;
+}
+app.get('/auth/ig/login', (req,res)=>{
+  if (!IG_APP_ID || !IG_REDIRECT) {
+    return res.status(400).send('Config faltando: defina IG_APP_ID e IG_REDIRECT nas variáveis de ambiente.');
+  }
+  const scope = [
+    'instagram_basic',
+    'instagram_manage_insights',
+    'pages_show_list',
+    'pages_read_engagement'
+  ].join(',');
+  const state = makeState();
+  const url = new URL('https://www.facebook.com/v18.0/dialog/oauth');
+  url.searchParams.set('client_id', IG_APP_ID);
+  url.searchParams.set('redirect_uri', IG_REDIRECT);
+  url.searchParams.set('scope', scope);
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('state', state);
+  res.redirect(url.toString());
+});
+
+async function fbGET(path, params){
+  const url = new URL(`https://graph.facebook.com/v18.0/${path}`);
+  for (const [k,v] of Object.entries(params||{})) url.searchParams.set(k, v);
+  const r = await fetch(url);
+  const j = await r.json();
+  if (!r.ok) throw new Error((j && j.error && j.error.message) || 'Erro OAuth');
+  return j;
+}
+
+app.get('/auth/ig/callback', async (req,res)=>{
+  try{
+    const { code, state } = req.query;
+    if (!code || !state || !DB.authStates.has(state)) {
+      return res.status(400).send('State inválido ou expirado.');
+    }
+    DB.authStates.delete(state);
+
+    if (!IG_APP_ID || !IG_APP_SECRET || !IG_REDIRECT) {
+      return res.status(400).send('Config faltando: IG_APP_ID/IG_APP_SECRET/IG_REDIRECT');
+    }
+
+    // 1) Troca code -> short-lived token
+    const tokenResp = await fbGET('oauth/access_token', {
+      client_id: IG_APP_ID,
+      client_secret: IG_APP_SECRET,
+      redirect_uri: IG_REDIRECT,
+      code: code
+    });
+    const shortToken = tokenResp.access_token;
+
+    // 2) Exchange para long-lived
+    const longResp = await fbGET('oauth/access_token', {
+      grant_type: 'fb_exchange_token',
+      client_id: IG_APP_ID,
+      client_secret: IG_APP_SECRET,
+      fb_exchange_token: shortToken
+    });
+    const longToken = longResp.access_token;
+
+    // 3) /me/accounts → pega páginas
+    const pages = await fbGET('me/accounts', { access_token: longToken });
+    const data = pages.data || [];
+
+    // 4) procura página com instagram_business_account
+    let chosen = null;
+    for (const p of data){
+      try{
+        const pageInfo = await fbGET(`${p.id}`, {
+          fields: 'instagram_business_account{id,username}',
+          access_token: longToken
+        });
+        if (pageInfo.instagram_business_account && pageInfo.instagram_business_account.id){
+          chosen = {
+            pageId: p.id,
+            igid: pageInfo.instagram_business_account.id,
+            username: pageInfo.instagram_business_account.username || ''
+          };
+          break;
+        }
+      }catch(_){}
+    }
+    if (!chosen) {
+      return res.status(400).send('Não encontrei um Instagram Business/Creator ligado a uma página nessa conta.');
+    }
+
+    // 5) salva credenciais ativas
+    DB.igCreds = {
+      token: longToken,
+      igid: chosen.igid,
+      pageId: chosen.pageId,
+      username: chosen.username
+    };
+
+    // volta pra UI
+    const okURL = `/public/connect.html?ok=1&user=${encodeURIComponent(DB.igCreds.username)}&igid=${encodeURIComponent(DB.igCreds.igid)}`;
+    res.redirect(okURL);
+  }catch(e){
+    res.status(500).send('Erro na conexão: '+ (e.message || 'desconhecido'));
   }
 });
 
