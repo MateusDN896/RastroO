@@ -2,56 +2,73 @@
 <html lang="pt-br">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Conectar Instagram — RastroO</title>
   <style>
     :root{color-scheme:dark light;font-family:system-ui,Segoe UI,Roboto,Arial}
-    body{margin:0;padding:24px;display:flex;min-height:100dvh;align-items:center;justify-content:center;background:#0b0e12;color:#eef}
+    body{margin:0;min-height:100dvh;display:grid;place-items:center;background:#0b0e12;color:#e8f0ff}
     .card{width:min(720px,92vw);background:#121722;border:1px solid #1f2a38;border-radius:16px;padding:20px}
     h1{margin:0 0 12px 0}
+    p{margin:6px 0}
     .row{display:flex;gap:12px;flex-wrap:wrap}
-    button{padding:12px 16px;border-radius:10px;border:1px solid #273447;background:#1b2533;color:#cfe;cursor:pointer}
+    .btn{padding:12px 16px;border-radius:10px;border:1px solid #273447;background:#1b2533;color:#cfe;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+    .btn:hover{filter:brightness(1.1)}
+    .pill{display:inline-block;padding:2px 8px;border:1px solid #2a394f;border-radius:999px;font-size:12px;margin-left:6px}
     .ok{color:#7ef38d}
     .warn{color:#ffca64}
     .err{color:#ff7a7a}
-    .pill{display:inline-block;padding:2px 8px;border:1px solid #2a394f;border-radius:999px;font-size:12px;margin-left:6px}
-    .k{opacity:.65}
+    pre{background:#0f141d;padding:12px;border-radius:10px;border:1px solid #223044;white-space:pre-wrap;word-break:break-word}
   </style>
 </head>
 <body>
   <div class="card">
     <h1>Conectar Instagram</h1>
-    <div id="msg" class="k">Checando status…</div>
-    <div style="height:8px"></div>
-    <div class="row">
-      <button onclick="connect()">Conectar com Instagram (Meta)</button>
-      <button onclick="location.href='/public/app.html#/dashboard'">← Dashboard</button>
+    <p id="msg">Checando status…</p>
+
+    <div class="row" style="margin:10px 0 14px">
+      <a class="btn" href="/auth/ig">Conectar com Instagram (Meta)</a>
+      <a class="btn" href="/public/app.html">← Voltar ao Dashboard</a>
     </div>
-    <div style="height:12px"></div>
-    <pre id="st" style="white-space:pre-wrap;word-break:break-word;background:#0f141d;padding:12px;border-radius:10px;border:1px solid #223044"></pre>
+
+    <pre id="st">{}</pre>
+
+    <p class="warn" style="opacity:.85">
+      Observação: seu Instagram precisa ser <b>Profissional (Business/Creator)</b> e estar
+      <b>vinculado a uma Página do Facebook</b> (a mesma que você administra).
+    </p>
   </div>
 
   <script>
-    function hashNote() {
-      const h = location.hash.slice(1);
-      if (!h) return;
-      const el = document.getElementById("msg");
-      if (h.startsWith("connected")) el.innerHTML = "✅ Conectado! Recarregue o Dashboard.";
-      else if (h.startsWith("no_ig_link")) el.innerHTML = "⚠️ Conectado ao Facebook, mas NÃO há Instagram Business ligado a nenhuma Página desta conta. Ligue seu IG a uma Página no app do IG (Configurações › Conta profissional › Compartilhar com o Facebook).";
-      else if (h.startsWith("state_error")) el.innerHTML = "❌ State inválido/expirado. Tente novamente.";
-      else if (h.startsWith("token_error")) el.innerHTML = "❌ Erro trocando o code pelo token.";
-      else if (h.startsWith("callback_error")) el.innerHTML = "❌ Erro no callback.";
+    function getParam(name){
+      const u = new URL(location.href);
+      return u.searchParams.get(name);
     }
-    async function refreshStatus(){
-      const r = await fetch("/api/ig/status"); const j = await r.json();
-      document.getElementById("st").textContent = JSON.stringify(j, null, 2);
-      const el = document.getElementById("msg");
-      if (j.connected) el.innerHTML = `✅ Conectado como @${j.username} (${j.page_name})`;
-      else if (j.connected_facebook) el.innerHTML = "⚠️ Facebook conectado, mas falta IG vinculado a uma Página.";
-      else el.innerHTML = "Não conectado.";
+    function setMsgFromQuery(){
+      const ok = getParam('ok');
+      const err = getParam('error');
+      const el = document.getElementById('msg');
+      if (ok) el.innerHTML = '✅ <span class="ok">Conectado com sucesso!</span>';
+      else if (err) el.innerHTML = '❌ <span class="err">' + decodeURIComponent(err) + '</span>';
     }
-    function connect(){ location.href="/auth/ig/login"; }
-    hashNote(); refreshStatus();
+    async function loadStatus(){
+      try{
+        const r = await fetch('/api/ig/status');
+        const j = await r.json();
+        document.getElementById('st').textContent = JSON.stringify(j, null, 2);
+        const el = document.getElementById('msg');
+        if (j.connected) {
+          el.innerHTML = '✅ <span class="ok">Conectado como @'+ (j.username||'') +'</span> <span class="pill">IG '+(j.igid||'')+'</span>';
+        } else if (j.connected_facebook) {
+          el.innerHTML = '⚠️ <span class="warn">Facebook conectado, mas o Instagram não está vinculado a uma Página.</span>';
+        } else {
+          el.textContent = 'Não conectado.';
+        }
+      }catch(e){
+        document.getElementById('msg').innerHTML = '❌ <span class="err">Falha ao consultar status</span>';
+      }
+    }
+    setMsgFromQuery();
+    loadStatus();
   </script>
 </body>
 </html>
