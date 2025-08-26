@@ -14,57 +14,74 @@
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto}
+    body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 system-ui,-apple-system,Segoe UI,Roboto}
     a{color:inherit;text-decoration:none}
     .app{min-height:100dvh;display:flex}
-    /* Desktop: sidebar; Mobile: some e entra tab bar */
+    /* Desktop sidebar / mobile esconde */
     .sidebar{width:260px;flex:0 0 260px;background:var(--panel);border-right:1px solid var(--border);padding:16px;position:sticky;top:0;height:100dvh;overflow:auto}
     .brand{display:flex;gap:10px;align-items:center;margin-bottom:12px}
     .brand-badge{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--brand),#3b82f6);display:grid;place-items:center;font-weight:900}
     .nav{display:flex;flex-direction:column;gap:6px}
-    .nav a{padding:10px 12px;border-radius:10px}
+    .nav a{padding:12px;border-radius:12px}
     .nav a.active{background:var(--card);border:1px solid var(--border)}
     .main{flex:1;min-width:0;display:flex;flex-direction:column}
-    .topbar{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--border);padding:10px 14px;display:flex;gap:10px;align-items:center;z-index:10}
+    .topbar{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--border);padding:12px 14px;display:flex;gap:10px;align-items:center;z-index:10}
     .container{padding:14px;display:grid;gap:14px}
     .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px}
-    .btn,select,input,button{font:inherit;color:inherit;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+    .btn,select,input,button{font:inherit;color:inherit;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px}
     .btn{cursor:pointer}
-    .tag{font-size:11px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);background:var(--card)}
+    .tag{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--border);background:var(--card)}
     .tag.paid{background:#22c55e22;color:#22c55e}
     .tag.fail{background:#ef444422;color:#f87171}
     .tag.lead{background:#f59e0b22;color:#fbbf24}
     .muted{color:var(--muted)}
-    .table-wrap{overflow:auto}
-    table{width:100%;border-collapse:collapse;min-width:640px}
-    th,td{padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;text-align:left}
-    th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-    .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-    .metric .k{font-size:clamp(22px,5vw,30px);font-weight:800}
     .grow{flex:1}
+
+    /* Tabelas (desktop) */
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:collapse;min-width:720px}
+    th,td{padding:12px;border-bottom:1px solid var(--border);white-space:nowrap;text-align:left}
+    th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+
+    /* Cards (mobile) */
+    .list{display:grid;gap:10px}
+    .list .item{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px;display:grid;gap:6px}
+    .item .title{font-weight:700}
+    .kv{display:flex;justify-content:space-between;gap:10px}
+    .kv .k{color:var(--muted);font-size:12px}
+    .kv .v{font-weight:600}
+
+    /* Métricas */
+    .metrics{display:grid;gap:10px}
+    .metric .k{font-size:clamp(22px,6vw,34px);font-weight:800}
+
     /* Tab bar (mobile) */
     .tabbar{
       position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--border);
       display:none;gap:6px;justify-content:space-around;padding:6px max(8px,env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-right));z-index:50
     }
-    .tabbar a{flex:1;text-align:center;border-radius:10px;padding:8px 6px;display:flex;flex-direction:column;gap:4px;align-items:center;min-height:56px}
+    .tabbar a{flex:1;text-align:center;border-radius:12px;padding:8px 6px;display:flex;flex-direction:column;gap:4px;align-items:center;min-height:56px}
     .tabbar a.active{background:var(--card);border:1px solid var(--border)}
     .tabbar .ico{font-size:18px;line-height:1}
     .tabbar .lbl{font-size:12px}
-    /* Mobile first */
+
+    /* Breakpoints */
+    @media (min-width:901px){
+      .metrics{grid-template-columns:repeat(3,1fr)}
+      .mobile-only{display:none !important}
+    }
     @media (max-width:900px){
       .sidebar{display:none}
       .tabbar{display:flex}
       .container{padding-bottom:calc(70px + env(safe-area-inset-bottom))}
-      table{min-width:560px}
-      .metrics{grid-template-columns:1fr}
+      .desktop-only{display:none !important}
     }
   </style>
 </head>
 <body>
   <div class="app">
     <!-- Sidebar (esconde no mobile) -->
-    <aside class="sidebar" id="sidebar">
+    <aside class="sidebar">
       <div class="brand">
         <div class="brand-badge">R</div>
         <div><strong>RastroO</strong><div class="muted" style="font-size:12px">Rastreador orgânico</div></div>
@@ -78,7 +95,7 @@
       </nav>
     </aside>
 
-    <!-- Conteúdo -->
+    <!-- Main -->
     <main class="main">
       <div class="topbar">
         <button class="btn" id="themeBtn">🌓</button>
@@ -87,10 +104,10 @@
       </div>
 
       <div class="container">
-        <!-- Banner de conexão (só aparece se não tiver conectado) -->
-        <div class="card" id="connectBanner" style="display:none; background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;border:0">
+        <!-- Banner de conexão -->
+        <div class="card" id="connectBanner" style="display:none;background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;border:0">
           <div style="display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap">
-            <div><strong>Conecte seu Instagram</strong><div style="opacity:.9">Para ver Reels & insights e atribuição.</div></div>
+            <div><strong>Conecte seu Instagram</strong><div style="opacity:.9">Para ver Reels, insights e atribuição.</div></div>
             <a class="btn" style="background:#fff;color:#111" href="/public/connect.html">Conectar</a>
           </div>
         </div>
@@ -119,7 +136,8 @@
             <div class="card metric"><div class="muted">Receita</div><div class="k" id="mRev">R$ 0,00</div></div>
           </div>
 
-          <div class="card">
+          <!-- Desktop: tabela / Mobile: cards -->
+          <div class="card desktop-only">
             <div class="table-wrap">
               <table>
                 <thead><tr><th>Username</th><th>Leads</th><th>Vendas</th><th>Receita</th><th>Último</th><th>Status</th></tr></thead>
@@ -127,12 +145,14 @@
               </table>
             </div>
           </div>
+
+          <div class="list mobile-only" id="cardsUsers"></div>
         </section>
 
         <!-- LEADS -->
         <section id="v-leads" style="display:none">
           <div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-            <strong>Leads (por usuário)</strong>
+            <strong>Leads</strong>
             <div class="grow"></div>
             <select id="periodL">
               <option value="today">Hoje</option>
@@ -146,7 +166,8 @@
               <button class="btn" id="applyL">Aplicar</button>
             </span>
           </div>
-          <div class="card">
+
+          <div class="card desktop-only">
             <div class="table-wrap">
               <table>
                 <thead><tr><th>Username</th><th>Leads</th><th>Vendas</th><th>Receita</th><th>Último</th><th>Status</th></tr></thead>
@@ -154,6 +175,7 @@
               </table>
             </div>
           </div>
+          <div class="list mobile-only" id="cardsLeads"></div>
         </section>
 
         <!-- REELS -->
@@ -163,7 +185,8 @@
             <div class="grow"></div>
             <a class="btn" href="/public/connect.html">Gerenciar conexão</a>
           </div>
-          <div class="card">
+
+          <div class="card desktop-only">
             <div class="table-wrap">
               <table>
                 <thead><tr><th>Reel</th><th>Plays</th><th>Likes</th><th>Comentários</th><th>Leads</th><th>Vendas</th></tr></thead>
@@ -171,6 +194,7 @@
               </table>
             </div>
           </div>
+          <div class="list mobile-only" id="cardsReels"></div>
         </section>
 
         <!-- CONNECT -->
@@ -212,14 +236,9 @@
     document.getElementById('themeBtn').onclick=()=>setTheme(root.getAttribute('data-theme')==='light'?'dark':'light');
     document.getElementById('themeBtn2')?.addEventListener('click',()=>setTheme(root.getAttribute('data-theme')==='light'?'dark':'light'));
 
-    // ===== Navegação simples (hash)
-    const views={
-      dashboard: document.getElementById('v-dashboard'),
-      leads: document.getElementById('v-leads'),
-      reels: document.getElementById('v-reels'),
-      connect: document.getElementById('v-connect'),
-      settings: document.getElementById('v-settings')
-    };
+    // ===== Navegação (hash)
+    const views={dashboard: v('dashboard'), leads: v('leads'), reels: v('reels'), connect: v('connect'), settings: v('settings')};
+    function v(id){ return document.getElementById('v-'+id); }
     function show(route){
       Object.values(views).forEach(el=> el.style.display='none');
       (views[route]||views.dashboard).style.display='block';
@@ -234,9 +253,10 @@
 
     // ===== Util
     function money(v){ return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+    function when(ts){ try{ return new Date(ts).toLocaleString('pt-BR'); }catch{ return ts; } }
     const tag = s => s==='pago' ? '<span class="tag paid">pago</span>' : (s==='reprovado' ? '<span class="tag fail">reprovado</span>' : '<span class="tag lead">lead</span>');
 
-    // ===== Conexão IG (se /api/ig/creds existir)
+    // ===== Conexão IG
     const connBadge=document.getElementById('connBadge');
     const connectBanner=document.getElementById('connectBanner');
     async function updateConn(){
@@ -247,7 +267,7 @@
         connBadge.className = 'tag ' + (ok ? 'paid':'fail');
         connectBanner.style.display = ok ? 'none' : 'block';
       }catch(_){
-        // se o endpoint não existir, só some o banner para não encher
+        // se o endpoint não existir, some o banner pra não atrapalhar
         connectBanner.style.display = 'none';
         connBadge.textContent = 'IG';
         connBadge.className = 'tag';
@@ -255,17 +275,17 @@
     }
 
     // ===== Períodos
-    function rangeVal(selId, boxId, fromId, toId, applyId, onChange){
-      const sel=document.getElementById(selId), box=document.getElementById(boxId);
-      const from=document.getElementById(fromId), to=document.getElementById(toId), apply=document.getElementById(applyId);
-      function doChange(){
+    function wireRange(selId, boxId, fromId, toId, applyId, onChange){
+      const sel=gid(selId), box=gid(boxId), from=gid(fromId), to=gid(toId), apply=gid(applyId);
+      function exec(){
         if(sel.value==='custom'){ onChange({custom:true, from:from.value, to:to.value}); }
         else { onChange({range:sel.value}); }
       }
-      sel.onchange=()=>{ const c=sel.value==='custom'; box.style.display=c?'inline-flex':'none'; if(!c) doChange(); };
-      apply?.addEventListener('click', doChange);
-      doChange();
+      sel.onchange=()=>{ const c=sel.value==='custom'; box.style.display=c?'inline-flex':'none'; if(!c) exec(); };
+      apply?.addEventListener('click', exec);
+      exec();
     }
+    const gid = id => document.getElementById(id);
     function isoDate(d){ return d.toISOString().slice(0,10); }
     function datesOf(range){
       if(!range || range==='all') return {};
@@ -274,77 +294,108 @@
         const end=new Date(); const start=new Date(Date.now()-(n-1)*86400000);
         return {from:isoDate(start), to:isoDate(end)};
       }
-      // custom: "YYYY-MM-DD"
       const [from,to]=range.split(','); return {from,to};
     }
-    // ===== DASHBOARD (usa /api/report e /api/leads)
-    const mLeads=document.getElementById('mLeads'), mSales=document.getElementById('mSales'), mRev=document.getElementById('mRev'), tblUsers=document.getElementById('tblUsers');
+
+    // ===== DASHBOARD
+    const mLeads=gid('mLeads'), mSales=gid('mSales'), mRev=gid('mRev');
+    const tblUsers=gid('tblUsers'), cardsUsers=gid('cardsUsers');
     let dashRange='7d';
-    rangeVal('period','customBox','from','to','apply',(p)=>{ dashRange = p.custom? `custom:${p.from},${p.to}` : (p.range||'7d'); loadSummary(); });
+    wireRange('period','customBox','from','to','apply',(p)=>{ dashRange = p.custom? `custom:${p.from},${p.to}` : (p.range||'7d'); loadSummary(); });
 
     async function loadSummary(){
       updateConn();
-      // resumo
       try{
         const {from,to}=dashRange.startsWith('custom:') ? (()=>{const s=dashRange.split(':')[1]; const [a,b]=s.split(','); return {from:a,to:b};})() : datesOf(dashRange);
         const qs=new URLSearchParams({ ...(from?{from}:{}) , ...(to?{to}:{}) }).toString();
+
+        // resumo
         const r=await fetch('/api/report?'+qs); const j=await r.json();
         mLeads.textContent = j?.summary?.leads ?? 0;
         mSales.textContent = j?.summary?.sales ?? 0;
         mRev.textContent   = money(j?.summary?.revenue ?? 0);
 
-        // tabela por @username (a partir de /api/leads)
+        // leads por usuário (agregado)
         const r2=await fetch('/api/leads?'+qs); const k=await r2.json();
-        const items=(k?.items||[]).slice(0,200);
+        const items=(k?.items||[]).slice(0,300);
+
+        // desktop tabela
         tblUsers.innerHTML = items.map(o=>`
           <tr>
             <td>@${o.iu||'-'}</td>
             <td>${o.leads||0}</td>
             <td>${o.sales||0}</td>
             <td>${money(o.revenue||0)}</td>
-            <td>${o.last_ts ? new Date(o.last_ts).toLocaleString('pt-BR') : '-'}</td>
-            <td>${o.status ? (o.status==='pago' ? '<span class="tag paid">pago</span>' : (o.status==='reprovado' ? '<span class="tag fail">reprovado</span>' : '<span class="tag lead">lead</span>')) : '<span class="tag lead">lead</span>'}</td>
+            <td>${o.last_ts ? when(o.last_ts) : '-'}</td>
+            <td>${tag(o.status||'lead')}</td>
           </tr>
         `).join('') || `<tr><td colspan="6" class="muted">Sem dados.</td></tr>`;
+
+        // mobile cards
+        cardsUsers.innerHTML = items.map(o=>`
+          <div class="item">
+            <div class="title">@${o.iu||'-'}</div>
+            <div class="kv"><div class="k">Leads</div><div class="v">${o.leads||0}</div></div>
+            <div class="kv"><div class="k">Vendas</div><div class="v">${o.sales||0}</div></div>
+            <div class="kv"><div class="k">Receita</div><div class="v">${money(o.revenue||0)}</div></div>
+            <div class="kv"><div class="k">Último</div><div class="v">${o.last_ts? when(o.last_ts) : '-'}</div></div>
+            <div>${tag(o.status||'lead')}</div>
+          </div>
+        `).join('') || `<div class="muted">Sem dados.</div>`;
       }catch(_){
         mLeads.textContent=0; mSales.textContent=0; mRev.textContent='R$ 0,00';
         tblUsers.innerHTML = `<tr><td colspan="6" class="muted">Sem dados.</td></tr>`;
+        cardsUsers.innerHTML = `<div class="muted">Sem dados.</div>`;
       }
     }
 
-    // ===== LEADS (lista igual ao dashboard, só que inteira)
+    // ===== LEADS (lista completa em cards + tabela)
+    const tblLeads=gid('tblLeads'), cardsLeads=gid('cardsLeads');
     let leadsRange='7d';
-    const tblLeads=document.getElementById('tblLeads');
-    rangeVal('periodL','customBoxL','fromL','toL','applyL',(p)=>{ leadsRange = p.custom? `custom:${p.from},${p.to}` : (p.range||'7d'); loadLeads(); });
+    wireRange('periodL','customBoxL','fromL','toL','applyL',(p)=>{ leadsRange = p.custom? `custom:${p.from},${p.to}` : (p.range||'7d'); loadLeads(); });
 
     async function loadLeads(){
       try{
         const {from,to}=leadsRange.startsWith('custom:') ? (()=>{const s=leadsRange.split(':')[1]; const [a,b]=s.split(','); return {from:a,to:b};})() : datesOf(leadsRange);
         const qs=new URLSearchParams({ ...(from?{from}:{}) , ...(to?{to}:{}) }).toString();
         const r=await fetch('/api/leads?'+qs); const j=await r.json();
-        const items=(j?.items||[]).slice(0,500);
+        const items=(j?.items||[]).slice(0,800);
+
         tblLeads.innerHTML = items.map(o=>`
           <tr>
             <td>@${o.iu||'-'}</td>
             <td>${o.leads||0}</td>
             <td>${o.sales||0}</td>
             <td>${money(o.revenue||0)}</td>
-            <td>${o.last_ts ? new Date(o.last_ts).toLocaleString('pt-BR') : '-'}</td>
-            <td>${o.status ? (o.status==='pago' ? '<span class="tag paid">pago</span>' : (o.status==='reprovado' ? '<span class="tag fail">reprovado</span>' : '<span class="tag lead">lead</span>')) : '<span class="tag lead">lead</span>'}</td>
+            <td>${o.last_ts ? when(o.last_ts) : '-'}</td>
+            <td>${tag(o.status||'lead')}</td>
           </tr>
         `).join('') || `<tr><td colspan="6" class="muted">Sem dados.</td></tr>`;
+
+        cardsLeads.innerHTML = items.map(o=>`
+          <div class="item">
+            <div class="title">@${o.iu||'-'}</div>
+            <div class="kv"><div class="k">Leads</div><div class="v">${o.leads||0}</div></div>
+            <div class="kv"><div class="k">Vendas</div><div class="v">${o.sales||0}</div></div>
+            <div class="kv"><div class="k">Receita</div><div class="v">${money(o.revenue||0)}</div></div>
+            <div class="kv"><div class="k">Último</div><div class="v">${o.last_ts? when(o.last_ts) : '-'}</div></div>
+            <div>${tag(o.status||'lead')}</div>
+          </div>
+        `).join('') || `<div class="muted">Sem dados.</div>`;
       }catch(_){
         tblLeads.innerHTML = `<tr><td colspan="6" class="muted">Erro ao carregar.</td></tr>`;
+        cardsLeads.innerHTML = `<div class="muted">Erro ao carregar.</div>`;
       }
     }
 
-    // ===== REELS (usa /api/ig/reels)
-    const tblReels=document.getElementById('tblReels');
+    // ===== REELS (tabela desktop + cards mobile)
+    const tblReels=gid('tblReels'), cardsReels=gid('cardsReels');
     async function loadReels(){
       updateConn();
       try{
         const r=await fetch('/api/ig/reels'); const j=await r.json();
         const items=j.items || j || [];
+
         tblReels.innerHTML = items.map(o=>`
           <tr>
             <td><a href="${o.permalink||'#'}" target="_blank">${o.caption?.slice(0,50)||o.id}</a></td>
@@ -355,18 +406,28 @@
             <td>${o.counts?.sales ?? o.sales ?? 0}</td>
           </tr>
         `).join('') || `<tr><td colspan="6" class="muted">Conecte o Instagram para ver os Reels.</td></tr>`;
+
+        cardsReels.innerHTML = items.map(o=>`
+          <div class="item">
+            <div class="title">${o.caption?.slice(0,60)||('Reel '+o.id)}</div>
+            <div class="kv"><div class="k">Plays</div><div class="v">${o.insights?.plays ?? o.views ?? 0}</div></div>
+            <div class="kv"><div class="k">Likes</div><div class="v">${o.like_count ?? o.likes ?? 0}</div></div>
+            <div class="kv"><div class="k">Comentários</div><div class="v">${o.comments_count ?? o.comments ?? 0}</div></div>
+            <div class="kv"><div class="k">Leads</div><div class="v">${o.counts?.leads ?? o.leads ?? 0}</div></div>
+            <div class="kv"><div class="k">Vendas</div><div class="v">${o.counts?.sales ?? o.sales ?? 0}</div></div>
+            <a class="btn" style="margin-top:6px" href="${o.permalink||'#'}" target="_blank">Abrir no Instagram</a>
+          </div>
+        `).join('') || `<div class="muted">Conecte o Instagram para ver os Reels.</div>`;
       }catch(_){
         tblReels.innerHTML = `<tr><td colspan="6" class="muted">Erro ao carregar Reels.</td></tr>`;
+        cardsReels.innerHTML = `<div class="muted">Erro ao carregar Reels.</div>`;
       }
     }
 
-    // start
+    // ===== Start
     (function start(){
-      // tema salvo + conexão
       updateConn();
-      // rota inicial
       const r=(location.hash.replace('#/','')||'dashboard'); show(r);
-      // quando voltar p/ dashboard, recarrega
       document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && location.hash==="#/dashboard") loadSummary(); });
     })();
   </script>
