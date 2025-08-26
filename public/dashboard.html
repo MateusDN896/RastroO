@@ -1,176 +1,278 @@
 <!doctype html>
-<html lang="pt-br">
+<html lang="pt-br" data-theme="light">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   <title>RastroO – Dashboard</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,'Noto Sans','Liberation Sans',sans-serif;padding:24px;max-width:1000px;margin:0 auto;background:#fafafa;color:#111}
-    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
-    .card{background:#fff;border:1px solid #eee;padding:16px;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-    .stat{display:flex;gap:12px}
-    .stat .kpi{flex:1;text-align:center}
-    .kpi h2{margin:4px 0 2px;font-size:28px}
-    .kpi p{margin:0;color:#555}
-    button, select, input{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid #ddd;background:#fff}
-    button{cursor:pointer}
-    table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden}
-    th,td{padding:10px 12px;border-bottom:1px solid #eee;text-align:left}
-    th{background:#f6f6f6}
-    .muted{color:#666;font-size:13px}
-    .ok{color:#0a7a2a}
-    .err{color:#b10000}
-    .pill{display:inline-block;padding:4px 8px;border:1px solid #ddd;border-radius:999px;font-size:12px}
+    :root{
+      --bg:#fafafa; --text:#111; --muted:#666;
+      --card:#ffffff; --border:#e6e6e6; --head:#f6f6f6;
+      --primary:#4f46e5; --primary-contrast:#ffffff;
+      --shadow:0 1px 2px rgba(0,0,0,.06);
+      --chip:#eef2ff;
+      --table-stripe:#fbfbfb;
+    }
+    [data-theme="dark"]{
+      --bg:#0b0b0f; --text:#e5e7eb; --muted:#9ca3af;
+      --card:#121319; --border:#1f2430; --head:#0e1117;
+      --primary:#8b5cf6; --primary-contrast:#0b0b0f;
+      --shadow:0 1px 2px rgba(0,0,0,.35);
+      --chip:#1d2330;
+      --table-stripe:#131722;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; padding:20px;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;
+      background:var(--bg); color:var(--text);
+    }
+    .container{max-width:1100px;margin:0 auto}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    header h1{font-size:22px;margin:0}
+    .spacer{flex:1}
+    .btn,button,select,input{
+      font:inherit; border:1px solid var(--border); background:var(--card); color:var(--text);
+      padding:10px 12px; border-radius:10px;
+    }
+    .btn-primary{
+      background:var(--primary); color:var(--primary-contrast); border-color:transparent;
+    }
+    .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .card{
+      background:var(--card); border:1px solid var(--border);
+      border-radius:14px; padding:14px; box-shadow:var(--shadow);
+    }
+    .kpis{
+      display:grid; gap:10px; margin:12px 0;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+    }
+    @media (max-width:900px){ .kpis{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    @media (max-width:520px){ .kpis{ grid-template-columns: 1fr; } }
+
+    .kpi{ text-align:center }
+    .kpi h2{margin:0;font-size:28px}
+    .kpi p{margin:4px 0 0;color:var(--muted)}
+    .pill{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--border);background:var(--chip);font-size:12px}
+    .status{font-size:12px;color:var(--muted)}
+
+    .table-wrap{overflow:auto;border:1px solid var(--border);border-radius:14px}
+    table{width:100%;border-collapse:collapse;min-width:720px;background:var(--card)}
+    th,td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+    th{background:var(--head);position:sticky;top:0;z-index:1}
+    tbody tr:nth-child(even){background:var(--table-stripe)}
     .right{margin-left:auto}
-    .footer{margin-top:24px}
-    .tiny{font-size:12px;color:#666}
-    @media (max-width:640px){.stat{flex-direction:column}}
+    .muted{color:var(--muted)}
+    .err{color:#ff6b6b}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .nowrap{white-space:nowrap}
+
+    /* Toggle tema */
+    .toggle{
+      display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);
+      border-radius:999px;background:var(--card);cursor:pointer;user-select:none
+    }
+    .dot{width:10px;height:10px;border-radius:50%;background:var(--primary)}
   </style>
 </head>
 <body>
-  <h1>RastroO – Dashboard</h1>
+  <div class="container">
+    <header>
+      <h1>RastroO – Dashboard</h1>
+      <span id="apiBase" class="pill"></span>
+      <div class="spacer"></div>
+      <button id="themeToggle" class="toggle" aria-label="Alternar tema">
+        <span class="dot" aria-hidden="true"></span>
+        <span id="themeLabel" class="muted">Modo escuro</span>
+      </button>
+    </header>
 
-  <div class="row card">
-    <div class="row" style="gap:8px">
-      <label>Período rápido:
-        <select id="quick">
-          <option value="today">Hoje</option>
-          <option value="7d" selected>Últimos 7 dias</option>
-          <option value="30d">Últimos 30 dias</option>
-        </select>
-      </label>
-      <label>De: <input type="date" id="from"></label>
-      <label>Até: <input type="date" id="to"></label>
-      <button id="btnLoad">Carregar</button>
-      <button id="btnAll">Ver Tudo (2000→2099)</button>
-      <span class="right muted" id="status">…</span>
-    </div>
-    <div id="lastFetch" class="tiny muted"></div>
-  </div>
+    <section class="card" style="margin-bottom:12px">
+      <div class="toolbar">
+        <label>Período:
+          <select id="quick">
+            <option value="today">Hoje</option>
+            <option value="7d" selected>Últimos 7 dias</option>
+            <option value="30d">Últimos 30 dias</option>
+          </select>
+        </label>
+        <label>De: <input type="date" id="from"></label>
+        <label>Até: <input type="date" id="to"></label>
+        <button id="btnLoad" class="btn">Carregar</button>
+        <button id="btnAll" class="btn">Ver Tudo</button>
+        <input id="filter" placeholder="Filtrar creator (@mateus)" style="min-width:220px" />
+        <button id="btnCsv" class="btn">Exportar CSV</button>
+        <label class="row nowrap" style="padding:6px 10px;border:1px solid var(--border);border-radius:10px">
+          <input type="checkbox" id="auto" style="margin-right:6px" /> Auto-refresh (30s)
+        </label>
+        <span class="right status" id="status">…</span>
+      </div>
+      <div id="lastFetch" class="status" style="margin-top:6px"></div>
+    </section>
 
-  <div class="row stat">
-    <div class="card kpi"><h2 id="kHits">0</h2><p>Hits</p></div>
-    <div class="card kpi"><h2 id="kLeads">0</h2><p>Leads</p></div>
-    <div class="card kpi"><h2 id="kSales">0</h2><p>Vendas</p></div>
-    <div class="card kpi"><h2 id="kRev">R$ 0,00</h2><p>Receita</p></div>
-  </div>
+    <section class="kpis">
+      <div class="card kpi"><h2 id="kHits">0</h2><p>Hits</p></div>
+      <div class="card kpi"><h2 id="kLeads">0</h2><p>Leads</p></div>
+      <div class="card kpi"><h2 id="kSales">0</h2><p>Vendas</p></div>
+      <div class="card kpi"><h2 id="kRev">R$ 0,00</h2><p>Receita</p></div>
+    </section>
 
-  <div class="card">
-    <table>
-      <thead>
-        <tr>
-          <th>Creator</th>
-          <th>Hits</th>
-          <th>Leads</th>
-          <th>Vendas</th>
-          <th>CR H→L</th>
-          <th>CR L→V</th>
-          <th>Receita</th>
-        </tr>
-      </thead>
-      <tbody id="tbody">
-        <tr><td colspan="7" class="muted">Carregue um período…</td></tr>
-      </tbody>
-    </table>
-  </div>
+    <section class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Creator</th>
+            <th>Hits</th>
+            <th>Leads</th>
+            <th>Vendas</th>
+            <th>CR H→L</th>
+            <th>CR L→V</th>
+            <th>Receita</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="7" class="muted">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </section>
 
-  <div id="error" class="err"></div>
-
-  <div class="footer tiny">
-    <span>API: <code id="apiBase"></code></span>
-    <span class="right">Dica: abra uma página com <span class="pill">?r=@teste&utm_source=@teste</span> para gravar HIT</span>
+    <p id="error" class="err"></p>
   </div>
 
 <script>
-  // >>>> Ajuste: sempre use o mesmo host do painel <<<<
-  const API = location.origin; // ex.: https://trk.rastroo.site
-  document.getElementById('apiBase').textContent = API;
+  // ===========================
+  // CONFIG
+  // ===========================
+  const API = location.origin; // mantém mesma origem do painel
+  document.getElementById('apiBase').textContent = API.replace(/^https?:\/\//,'');
 
-  function fmtMoney(v){ return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
-  function ymd(d){ const z=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate()); }
-
-  function rangeQuick(key){
-    const end = new Date();
-    const start = new Date();
-    if(key==='today'){ /* zero horas/hoje */ }
-    if(key==='7d'){ start.setDate(start.getDate()-6); }
-    if(key==='30d'){ start.setDate(start.getDate()-29); }
-    return { from: ymd(start), to: ymd(end) };
+  // ===========================
+  // THEME (claro/escuro)
+  // ===========================
+  const themeKey = 'rastroo_theme';
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const saved = localStorage.getItem(themeKey);
+  function applyTheme(mode){
+    document.documentElement.setAttribute('data-theme', mode);
+    document.getElementById('themeLabel').textContent = (mode==='dark'?'Modo claro':'Modo escuro');
+    localStorage.setItem(themeKey, mode);
   }
+  applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+  document.getElementById('themeToggle').addEventListener('click', ()=>{
+    const current = document.documentElement.getAttribute('data-theme');
+    applyTheme(current==='dark' ? 'light' : 'dark');
+  });
+
+  // ===========================
+  // HELPERS
+  // ===========================
+  let lastData = null, timer = null;
+  const fmtMoney = v => (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  const ymd = d => { const z=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate()); };
+  const rangeQuick = key => {
+    const end = new Date(), start = new Date();
+    if(key==='7d') start.setDate(start.getDate()-6);
+    if(key==='30d') start.setDate(start.getDate()-29);
+    return { from: ymd(start), to: ymd(end) };
+  };
+  function setStatus(s){ document.getElementById('status').textContent = s; }
+  function setLast(u){ document.getElementById('lastFetch').textContent = 'Fetch: '+u; }
+  function setError(m){ document.getElementById('error').textContent = m||''; }
 
   async function loadReport(from, to){
     const url = `${API}/api/report?from=${from}&to=${to}`;
-    setStatus('Carregando…');
-    setLast(url);
-    setError('');
+    setStatus('Carregando…'); setLast(url); setError('');
     try{
       const r = await fetch(url, { cache:'no-store' });
       if(!r.ok) throw new Error('HTTP '+r.status);
       const j = await r.json();
-      if(!j.ok) throw new Error('API retornou ok=false');
-
-      // KPIs
-      document.getElementById('kHits').textContent  = j.summary.hits||0;
-      document.getElementById('kLeads').textContent = j.summary.leads||0;
-      document.getElementById('kSales').textContent = j.summary.sales||0;
-      document.getElementById('kRev').textContent   = fmtMoney(j.summary.revenue||0);
-
-      // Tabela
-      const tb = document.getElementById('tbody');
-      tb.innerHTML = '';
-      if(!j.perCreator || j.perCreator.length===0){
-        tb.innerHTML = `<tr><td colspan="7" class="muted">Sem dados para o período.</td></tr>`;
-      } else {
-        j.perCreator.sort((a,b)=> (b.hits||0)-(a.hits||0));
-        for(const r of j.perCreator){
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${r.creator||'—'}</td>
-            <td>${r.hits||0}</td>
-            <td>${r.leads||0}</td>
-            <td>${r.sales||0}</td>
-            <td>${(r.cr_h_to_l||0)}%</td>
-            <td>${(r.cr_l_to_v||0)}%</td>
-            <td>${fmtMoney(r.revenue||0)}</td>`;
-          tb.appendChild(tr);
-        }
-      }
-      setStatus('OK ✅');
+      if(!j.ok) throw new Error('API ok=false');
+      lastData = j; render(); setStatus('OK ✅');
     }catch(e){
-      setError('Falha ao carregar: '+e.message);
-      setStatus('Erro ❌');
+      setError('Falha ao carregar: '+e.message); setStatus('Erro ❌');
     }
   }
 
-  function setStatus(s){ document.getElementById('status').textContent = s; }
-  function setLast(u){ document.getElementById('lastFetch').textContent = 'Fetch: '+u; }
-  function setError(msg){ document.getElementById('error').textContent = msg; }
+  function render(){
+    if(!lastData) return;
+    // KPIs
+    document.getElementById('kHits').textContent  = lastData.summary.hits||0;
+    document.getElementById('kLeads').textContent = lastData.summary.leads||0;
+    document.getElementById('kSales').textContent = lastData.summary.sales||0;
+    document.getElementById('kRev').textContent   = fmtMoney(lastData.summary.revenue||0);
 
-  // UI handlers
-  document.getElementById('btnLoad').addEventListener('click', (ev)=>{
-    ev.preventDefault();
+    // Filtrar & renderizar tabela
+    const filt = (document.getElementById('filter').value||'').trim().toLowerCase();
+    const rows = (lastData.perCreator||[])
+      .filter(r => !filt || (r.creator||'').toLowerCase().includes(filt))
+      .sort((a,b)=> (b.hits||0)-(a.hits||0));
+
+    const tb = document.getElementById('tbody');
+    tb.innerHTML = rows.length ? '' : `<tr><td colspan="7" class="muted">Sem dados para o período.</td></tr>`;
+    for(const r of rows){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${r.creator||'—'}</td>
+        <td>${r.hits||0}</td>
+        <td>${r.leads||0}</td>
+        <td>${r.sales||0}</td>
+        <td>${(r.cr_h_to_l||0)}%</td>
+        <td>${(r.cr_l_to_v||0)}%</td>
+        <td>${fmtMoney(r.revenue||0)}</td>`;
+      tb.appendChild(tr);
+    }
+  }
+
+  function exportCsv(){
+    if(!lastData) return;
+    const rows = [['creator','hits','leads','sales','cr_h_to_l','cr_l_to_v','revenue']];
+    for(const r of (lastData.perCreator||[])){
+      rows.push([r.creator||'', r.hits||0, r.leads||0, r.sales||0, (r.cr_h_to_l||0), (r.cr_l_to_v||0), (r.revenue||0)]);
+    }
+    const csv = rows.map(a=>a.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = `rastroo-${Date.now()}.csv`; a.click();
+  }
+
+  // ===========================
+  // UI events
+  // ===========================
+  document.getElementById('btnLoad').onclick = () => {
     const f = document.getElementById('from').value;
     const t = document.getElementById('to').value;
-    if(!f || !t){ setError('Defina as datas "De" e "Até" ou use o seletor rápido.'); return; }
-    loadReport(f, t);
-  });
-
-  document.getElementById('btnAll').addEventListener('click', ()=>{
-    loadReport('2000-01-01','2099-12-31');
-  });
-
-  document.getElementById('quick').addEventListener('change', ()=>{
+    if(!f || !t){ setError('Defina De/Até ou use o seletor de período'); return; }
+    loadReport(f,t);
+  };
+  document.getElementById('btnAll').onclick = () => loadReport('2000-01-01','2099-12-31');
+  document.getElementById('quick').onchange = () => {
     const {from,to} = rangeQuick(document.getElementById('quick').value);
     document.getElementById('from').value = from;
     document.getElementById('to').value = to;
-  });
+    loadReport(from,to);
+  };
+  document.getElementById('filter').oninput = render;
+  document.getElementById('btnCsv').onclick = exportCsv;
+  document.getElementById('auto').onchange = (e)=>{
+    if(e.target.checked){
+      if(timer) clearInterval(timer);
+      timer = setInterval(()=>{
+        const f = document.getElementById('from').value;
+        const t = document.getElementById('to').value;
+        loadReport(f,t);
+      }, 30000);
+    } else if(timer){ clearInterval(timer); timer=null; }
+  };
 
-  // Inicializa: coloca 7d e carrega automaticamente
+  // ===========================
+  // init (7d auto)
+  // ===========================
   (function init(){
     const {from,to} = rangeQuick('7d');
     document.getElementById('from').value = from;
     document.getElementById('to').value = to;
-    loadReport(from, to);
+    loadReport(from,to);
   })();
 </script>
 </body>
