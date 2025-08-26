@@ -1,206 +1,253 @@
-// server.js (RastroO) — versão “conecta Instagram” completa e robusta
-// Apague o conteúdo antigo e cole este arquivo inteiro.
+// server.js
+// RastroO backend robusto para Render (Node 18+)
 
-import express from "express";
-import fetch from "node-fetch";
-import cookieParser from "cookie-parser";
-import crypto from "crypto";
-import path from "path";
-import fs from "fs";
+const express = require("express");
+const cors = require("cors");
+const cookieParser = require("cookie-parser");
+const fs = require("fs");
+const path = require("path");
 
+// ========== Config ==========
 const app = express();
+app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
-// ---------- CONFIG ----------
-const IG_APP_ID = process.env.IG_APP_ID;          // ex: 1349096403310350
-const IG_APP_SECRET = process.env.IG_APP_SECRET;  // a chave secreta do app
-const IG_REDIRECT = process.env.IG_REDIRECT;      // ex: https://trk.rastroo.site/auth/ig/callback
+// PUBLIC estático
+const PUBLIC_DIR = path.join(__dirname, "public");
+app.use("/public", express.static(PUBLIC_DIR));
 
-// Segurança básica de checagem de env
-if (!IG_APP_ID || !IG_APP_SECRET || !IG_REDIRECT) {
-  console.warn("Faltam variáveis IG_APP_ID, IG_APP_SECRET e/ou IG_REDIRECT.");
-}
+// PORTA do Render
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
-// ---------- ARMAZENAMENTO (simples em arquivo) ----------
-const DATA_DIR = "./data";
-const IG_STORE_FILE = path.join(DATA_DIR, "ig_store.json");
+// Armazenamento em disco (seguro)
+const DATA_DIR =
+  process.env.DISK_PATH ? path.dirname(process.env.DISK_PATH) : path.join(__dirname, "data");
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+const IG_STORE_FILE = process.env.DISK_PATH || path.join(DATA_DIR, "ig_store.json");
 
-function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(IG_STORE_FILE)) fs.writeFileSync(IG_STORE_FILE, JSON.stringify({}), "utf-8");
-}
-ensureDataDir();
-
-function loadStore() {
+// Helpers de arquivo
+function safeRead(file, fallback = {}) {
   try {
-    const raw = fs.readFileSync(IG_STORE_FILE, "utf-8");
-    return JSON.parse(raw || "{}");
-  } catch {
-    return {};
+    if (!fs.existsSync(file)) return fallback;
+    const raw = fs.readFileSync(file, "utf8");
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    console.warn("safeRead error:", e.message);
+    return fallback;
   }
 }
-function saveStore(obj) {
-  fs.writeFileSync(IG_STORE_FILE, JSON.stringify(obj, null, 2), "utf-8");
-}
-
-// ---------- SERVE PASTA PUBLIC ----------
-app.use("/public", express.static("public", { fallthrough: true }));
-
-// ---------- HELPERS ----------
-const FB = "https://graph.facebook.com/v18.0";
-const FB_AUTH = "https://www.facebook.com/v18.0/dialog/oauth";
-
-function makeState() {
-  return crypto.randomBytes(24).toString("hex");
-}
-
-function previewToken(t) {
-  if (!t || t.length < 8) return "";
-  return t.slice(0, 4) + "…" + t.slice(-4);
-}
-
-// Busca IG conectado a UMA das páginas da conta
-async function findIgAccount(userAccessToken) {
-  // 1) lista páginas
-  const pagesRes = await fetch(`${FB}/me/accounts?fields=name,instagram_business_account&limit=100&access_token=${userAccessToken}`);
-  if (!pagesRes.ok) throw new Error(`Erro listando páginas: ${await pagesRes.text()}`);
-  const pages = (await pagesRes.json()).data || [];
-
-  for (const p of pages) {
-    if (p.instagram_business_account && p.instagram_business_account.id) {
-      const igId = p.instagram_business_account.id;
-      // pega username
-      const igRes = await fetch(`${FB}/${igId}?fields=username&access_token=${userAccessToken}`);
-      if (!igRes.ok) throw new Error(`Erro pegando IG username: ${await igRes.text()}`);
-      const ig = await igRes.json();
-      return {
-        page_id: p.id,
-        page_name: p.name,
-        ig_id: igId,
-        ig_username: ig.username || ""
-      };
-    }
+function safeWrite(file, obj) {
+  try {
+    fs.writeFileSync(file, JSON.stringify(obj, null, 2), "utf8");
+  } catch (e) {
+    console.warn("safeWrite error:", e.message);
   }
-  return null; // nenhuma página com IG vinculado
 }
 
-// Troca S->L (short->long lived) para ficar estável ~60 dias
-async function exchangeLongLived(userAccessToken) {
-  const url = `${FB}/oauth/access_token?grant_type=fb_exchange_token&client_id=${IG_APP_ID}&client_secret=${IG_APP_SECRET}&fb_exchange_token=${userAccessToken}`;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`Erro exchange long-lived: ${await r.text()}`);
-  return await r.json(); // { access_token, token_type, expires_in }
+// Estado
+const store = safeRead(IG_STORE_FILE, { instagram: {} });
+let lastOAuth = null;
+
+// ENV (não derruba o server se estiver faltando; só avisa)
+const IG_APP_ID = process.env.IG_APP_ID || "";
+const IG_APP_SECRET = process.env.IG_APP_SECRET || "";
+const IG_REDIRECT = process.env.IG_REDIRECT || "";
+const IG_VERIFY_TOKEN = process.env.IG_VERIFY_TOKEN || "RASTROO_VERIFY";
+const OAUTH_STATE_SECRET = process.env.OAUTH_STATE_SECRET || "state_local_dev";
+
+function envOk() {
+  const miss = [];
+  if (!IG_APP_ID) miss.push("IG_APP_ID");
+  if (!IG_APP_SECRET) miss.push("IG_APP_SECRET");
+  if (!IG_REDIRECT) miss.push("IG_REDIRECT");
+  if (miss.length) {
+    console.warn("⚠️ Variáveis ausentes:", miss.join(", "));
+    return false;
+  }
+  return true;
 }
 
-// ---------- API: STATUS ----------
-app.get("/api/ig/status", async (req, res) => {
-  const store = loadStore();
-  const s = {
-    ok: true,
-    connected: Boolean(store.user_access_token && store.ig_id),
-    connected_facebook: Boolean(store.user_access_token),
-    ig_id: store.ig_id || "",
-    username: store.ig_username || "",
-    page_name: store.page_name || "",
-    token_preview: previewToken(store.user_access_token),
-    token_expires_in: store.expires_in || null
-  };
-  res.json(s);
+// ===== Saúde e raiz =====
+app.get("/", (_req, res) => {
+  res.redirect("/public/app.html");
+});
+app.get("/healthz", (_req, res) => {
+  res.json({ ok: true, time: new Date().toISOString() });
 });
 
-// ---------- AUTH: LOGIN ----------
-app.get("/auth/ig/login", (req, res) => {
-  const state = makeState();
-  // grava state em cookie (SameSite=Lax para sobreviver ao redirect)
-  res.cookie("ig_oauth_state", state, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: true
+// ===== Status IG =====
+app.get("/api/ig/status", (_req, res) => {
+  const ig = store.instagram || {};
+  res.json({
+    ok: true,
+    connected_facebook: Boolean(ig.facebook_access_token),
+    connected: Boolean(ig.ig_user_id && ig.username && ig.facebook_access_token),
+    igid: ig.ig_user_id || "",
+    username: ig.username || "",
+    token_preview: ig.facebook_access_token
+      ? ig.facebook_access_token.slice(0, 6) + "..." + ig.facebook_access_token.slice(-4)
+      : "",
   });
+});
 
-  const scope = [
-    "pages_show_list",
-    "pages_read_engagement",
+// ===== Debug =====
+app.get("/api/debug/last_oauth", (_req, res) => {
+  res.json({ ok: true, lastOAuth });
+});
+
+// ===== OAuth IG =====
+app.get("/auth/ig", (req, res) => {
+  if (!envOk()) {
+    return res
+      .status(500)
+      .send("Config faltando: defina IG_APP_ID, IG_APP_SECRET e IG_REDIRECT no Render.");
+  }
+  const state = Buffer.from(
+    JSON.stringify({
+      t: Date.now(),
+      s: OAUTH_STATE_SECRET,
+    }),
+  ).toString("base64");
+
+  const scopes = [
     "instagram_basic",
     "instagram_manage_insights",
-    "instagram_manage_comments"
-  ].join(",");
+    "instagram_manage_messages",
+    "pages_show_list",
+    "pages_read_engagement",
+    "business_management",
+  ];
 
-  const url = `${FB_AUTH}?client_id=${IG_APP_ID}&redirect_uri=${encodeURIComponent(IG_REDIRECT)}&state=${state}&response_type=code&scope=${scope}`;
-  return res.redirect(url);
+  const url =
+    "https://www.facebook.com/v19.0/dialog/oauth" +
+    `?client_id=${encodeURIComponent(IG_APP_ID)}` +
+    `&redirect_uri=${encodeURIComponent(IG_REDIRECT)}` +
+    `&response_type=code` +
+    `&scope=${encodeURIComponent(scopes.join(","))}` +
+    `&state=${encodeURIComponent(state)}`;
+
+  res.redirect(url);
 });
 
-// ---------- AUTH: CALLBACK ----------
 app.get("/auth/ig/callback", async (req, res) => {
   try {
     const { code, state } = req.query;
-    const cookieState = req.cookies.ig_oauth_state;
-    if (!code || !state || !cookieState || state !== cookieState) {
-      return res.redirect("/public/connect.html#state_error");
+    if (!code || !state) throw new Error("Código/estado ausente");
+
+    // valida state
+    try {
+      const parsed = JSON.parse(Buffer.from(String(state), "base64").toString("utf8"));
+      if (!parsed || parsed.s !== OAUTH_STATE_SECRET) {
+        throw new Error("State inválido ou expirado");
+      }
+    } catch {
+      throw new Error("State inválido ou expirado");
     }
 
-    // troca code -> short-lived user token
-    const tokenUrl = `${FB}/oauth/access_token?client_id=${IG_APP_ID}&client_secret=${IG_APP_SECRET}&redirect_uri=${encodeURIComponent(IG_REDIRECT)}&code=${code}`;
-    const tRes = await fetch(tokenUrl);
-    if (!tRes.ok) {
-      const txt = await tRes.text();
-      return res.redirect(`/public/connect.html#token_error:${encodeURIComponent(txt)}`);
+    // troca pelo access_token curto
+    const tokenURL =
+      "https://graph.facebook.com/v19.0/oauth/access_token" +
+      `?client_id=${encodeURIComponent(IG_APP_ID)}` +
+      `&client_secret=${encodeURIComponent(IG_APP_SECRET)}` +
+      `&redirect_uri=${encodeURIComponent(IG_REDIRECT)}` +
+      `&code=${encodeURIComponent(String(code))}`;
+
+    const tokenResp = await fetch(tokenURL);
+    const tokenJson = await tokenResp.json();
+    if (!tokenResp.ok) throw new Error("Token error: " + JSON.stringify(tokenJson));
+
+    let accessToken = tokenJson.access_token;
+
+    // troca por token longo
+    const longURL =
+      "https://graph.facebook.com/v19.0/oauth/access_token" +
+      `?grant_type=fb_exchange_token` +
+      `&client_id=${encodeURIComponent(IG_APP_ID)}` +
+      `&client_secret=${encodeURIComponent(IG_APP_SECRET)}` +
+      `&fb_exchange_token=${encodeURIComponent(accessToken)}`;
+
+    const longResp = await fetch(longURL);
+    const longJson = await longResp.json();
+    if (longResp.ok && longJson.access_token) {
+      accessToken = longJson.access_token;
     }
-    const tJson = await tRes.json(); // {access_token, token_type, expires_in}
-    const shortToken = tJson.access_token;
 
-    // troca para long-lived
-    const longJson = await exchangeLongLived(shortToken);
-    const userToken = longJson.access_token;
-    const expiresIn = longJson.expires_in;
+    // me/accounts → páginas
+    const pagesResp = await fetch(
+      `https://graph.facebook.com/v19.0/me/accounts?access_token=${encodeURIComponent(
+        accessToken,
+      )}`,
+    );
+    const pagesJson = await pagesResp.json();
+    if (!pagesResp.ok) throw new Error("me/accounts error: " + JSON.stringify(pagesJson));
 
-    // tenta identificar IG vinculado
-    const link = await findIgAccount(userToken);
-
-    const store = loadStore();
-    store.user_access_token = userToken;
-    store.expires_in = expiresIn;
-    // se achou IG
-    if (link) {
-      store.page_id = link.page_id;
-      store.page_name = link.page_name;
-      store.ig_id = link.ig_id;
-      store.ig_username = link.ig_username;
-      saveStore(store);
-      return res.redirect("/public/connect.html#connected");
-    } else {
-      // salva mesmo assim (conectado ao FB, mas IG não está ligado a uma Página)
-      store.page_id = "";
-      store.page_name = "";
-      store.ig_id = "";
-      store.ig_username = "";
-      saveStore(store);
-      return res.redirect("/public/connect.html#no_ig_link");
+    let found = null;
+    if (Array.isArray(pagesJson.data)) {
+      for (const pg of pagesJson.data) {
+        const igResp = await fetch(
+          `https://graph.facebook.com/v19.0/${pg.id}?fields=connected_instagram_account&access_token=${encodeURIComponent(
+            accessToken,
+          )}`,
+        );
+        const igJson = await igResp.json();
+        const igAcc = igJson.connected_instagram_account;
+        if (igAcc && igAcc.id) {
+          // pega username
+          const userResp = await fetch(
+            `https://graph.facebook.com/v19.0/${igAcc.id}?fields=username&access_token=${encodeURIComponent(
+              accessToken,
+            )}`,
+          );
+          const userJson = await userResp.json();
+          found = {
+            page_id: pg.id,
+            ig_user_id: igAcc.id,
+            username: userJson.username || "",
+          };
+          break;
+        }
+      }
     }
-  } catch (e) {
-    return res.redirect(`/public/connect.html#callback_error:${encodeURIComponent(e.message)}`);
+    if (!found) throw new Error("Não encontrei um Instagram Business/Creator ligado a uma página.");
+
+    // salva
+    store.instagram = {
+      facebook_access_token: accessToken,
+      ig_user_id: found.ig_user_id,
+      username: found.username,
+      page_id: found.page_id,
+      updated_at: new Date().toISOString(),
+    };
+    safeWrite(IG_STORE_FILE, store);
+
+    lastOAuth = { ok: true, when: new Date().toISOString(), store: store.instagram };
+
+    // volta para a UI
+    res.redirect("/public/connect.html?ok=1");
+  } catch (err) {
+    console.error("OAuth callback error:", err);
+    lastOAuth = { ok: false, error: String(err && err.message ? err.message : err) };
+    res.redirect(
+      `/public/connect.html?error=${encodeURIComponent(
+        lastOAuth.error || "Erro ao conectar",
+      )}`,
+    );
   }
 });
 
-// ---------- (opcional) refrescar token sob demanda ----------
-app.get("/api/ig/refresh", async (req, res) => {
-  try {
-    const store = loadStore();
-    if (!store.user_access_token) return res.json({ ok: false, error: "Sem token" });
-    const ll = await exchangeLongLived(store.user_access_token);
-    store.user_access_token = ll.access_token;
-    store.expires_in = ll.expires_in;
-    saveStore(store);
-    res.json({ ok: true, token_preview: previewToken(store.user_access_token), expires_in: store.expires_in });
-  } catch (e) {
-    res.json({ ok: false, error: e.message });
+// ===== Webhook (opcional para “Verify Token”) =====
+app.get("/ig/webhook", (req, res) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+  if (mode === "subscribe" && token === IG_VERIFY_TOKEN) {
+    return res.status(200).send(challenge);
   }
+  return res.sendStatus(403);
 });
 
-// ---------- FALLBACK ----------
-app.get("/", (_, res) => res.redirect("/public/app.html"));
-app.use((_, res) => res.status(404).send("Not found"));
-
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log("RastroO up on", PORT));
+// ===== Start =====
+app.listen(PORT, () => {
+  console.log(`RastroO server on :${PORT}`);
+});
