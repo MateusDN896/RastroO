@@ -431,5 +431,28 @@
       document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && location.hash==="#/dashboard") loadSummary(); });
     })();
   </script>
+  <!-- PATCH: redireciona #/reels para o carrossel novo -->
+<script>
+(function () {
+  function patch() {
+    const page = (location.hash || '').replace('#/', '');
+    if (page === 'reels') {
+      // usa replace para não poluir o histórico
+      location.replace('/public/reels.html');
+      return true;
+    }
+    return false;
+  }
+
+  // roda ao carregar e a cada mudança de hash
+  document.addEventListener('DOMContentLoaded', patch, { once: true });
+  window.addEventListener('hashchange', patch, { passive: true });
+
+  // opcional: se o menu tiver link "#/reels", troca para o arquivo novo
+  const link = document.querySelector('a[href="#/reels"]');
+  if (link) link.setAttribute('href', '/public/reels.html');
+})();
+</script>
+
 </body>
 </html>
