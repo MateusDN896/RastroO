@@ -1,512 +1,374 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
   <title>RastroO — App</title>
   <style>
     :root{
-      --bg: #0b1020;
-      --panel:#111933;
-      --muted:#6b7280;
-      --text:#e5e7eb;
-      --brand:#7c3aed;
-      --brand-2:#22c55e;
-      --danger:#ef4444;
-      --warn:#f59e0b;
-      --ok:#22c55e;
-      --card:#0f152b;
-      --border:#1f2942;
-      --shadow:0 10px 30px rgba(0,0,0,.35);
+      --bg:#0b1020;--panel:#111933;--card:#0f152b;--text:#e5e7eb;--muted:#9aa3b2;--border:#1f2942;
+      --brand:#7c3aed;--ok:#22c55e;--danger:#ef4444;--warn:#f59e0b;
     }
     [data-theme="light"]{
-      --bg:#f7f7fb;
-      --panel:#ffffff;
-      --card:#ffffff;
-      --text:#0f172a;
-      --muted:#6b7280;
-      --border:#e5e7eb;
-      --shadow:0 6px 20px rgba(16,24,40,.08);
+      --bg:#f7f7fb;--panel:#ffffff;--card:#ffffff;--text:#0f172a;--muted:#6b7280;--border:#e5e7eb;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{
-      margin:0; background:var(--bg); color:var(--text);
-      font: 14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
-    }
-    a{color:inherit; text-decoration:none}
-    .app{display:flex; min-height:100dvh}
-    /* Sidebar */
-    .sidebar{
-      width:270px; flex:0 0 270px; background:var(--panel); border-right:1px solid var(--border);
-      position:sticky; top:0; height:100dvh; padding:20px 16px; overflow:auto;
-    }
-    .brand{display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.3px; margin-bottom:18px}
-    .brand-badge{display:inline-flex; width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,var(--brand),#3b82f6); align-items:center; justify-content:center; box-shadow:var(--shadow)}
-    .brand-badge span{font-size:15px; font-weight:900}
-    .side-section{margin:18px 0 10px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em}
-    .nav{display:flex; flex-direction:column; gap:6px}
-    .nav a{
-      padding:10px 12px; border-radius:10px; display:flex; align-items:center; gap:10px; border:1px solid transparent;
-    }
-    .nav a.active{background:var(--card); border-color:var(--border)}
-    .pill{font-size:11px; padding:2px 8px; border-radius:999px; background:var(--brand); color:#fff; margin-left:auto}
-    .foot{margin-top:24px; display:flex; gap:8px; align-items:center; justify-content:space-between}
-    .btn, button, select, input{
-      font:inherit; color:inherit; background:var(--card); border:1px solid var(--border); border-radius:10px;
-      padding:10px 12px; outline:none;
-    }
+    body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto}
+    a{color:inherit;text-decoration:none}
+    .app{min-height:100dvh;display:flex}
+    /* Desktop: sidebar; Mobile: some e entra tab bar */
+    .sidebar{width:260px;flex:0 0 260px;background:var(--panel);border-right:1px solid var(--border);padding:16px;position:sticky;top:0;height:100dvh;overflow:auto}
+    .brand{display:flex;gap:10px;align-items:center;margin-bottom:12px}
+    .brand-badge{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--brand),#3b82f6);display:grid;place-items:center;font-weight:900}
+    .nav{display:flex;flex-direction:column;gap:6px}
+    .nav a{padding:10px 12px;border-radius:10px}
+    .nav a.active{background:var(--card);border:1px solid var(--border)}
+    .main{flex:1;min-width:0;display:flex;flex-direction:column}
+    .topbar{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--border);padding:10px 14px;display:flex;gap:10px;align-items:center;z-index:10}
+    .container{padding:14px;display:grid;gap:14px}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px}
+    .btn,select,input,button{font:inherit;color:inherit;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
     .btn{cursor:pointer}
-    .btn.primary{background:var(--brand); border-color:transparent; color:white}
-    .btn.ghost{background:transparent}
-    .btn.success{background:var(--brand-2); border-color:transparent; color:#06250e}
-    .btn.warn{background:var(--warn); color:#231500; border-color:transparent}
-    .btn.danger{background:var(--danger); color:white; border-color:transparent}
-    .tag{font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
-    .tag.lead{background:#f59e0b22; color:#fbbf24}
-    .tag.paid{background:#22c55e22; color:#22c55e}
-    .tag.fail{background:#ef444422; color:#f87171}
-    /* Main */
-    .main{flex:1; min-width:0; display:flex; flex-direction:column}
-    .topbar{position:sticky; top:0; background:var(--panel); border-bottom:1px solid var(--border); padding:12px 16px; display:flex; gap:12px; align-items:center; z-index:10}
-    .topbar .grow{flex:1}
-    .container{padding:20px; display:grid; gap:20px}
-    .banner{
-      background:linear-gradient(135deg,#0ea5e9,#6366f1); color:white; border-radius:14px; padding:14px 16px; display:flex; gap:12px; align-items:center; justify-content:space-between;
-      box-shadow:var(--shadow)
-    }
-    .grid{display:grid; gap:14px}
-    .cards{grid-template-columns:repeat(12,1fr)}
-    .card{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:16px; box-shadow:var(--shadow)}
-    .metric{display:flex; flex-direction:column; gap:6px}
-    .metric .k{font-weight:800; font-size:26px}
-    .metric .s{color:var(--muted); font-size:12px}
-    .table-wrap{overflow:auto}
-    table{width:100%; border-collapse:collapse}
-    th,td{padding:12px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap}
-    th{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em}
-    .row{display:grid; gap:14px; grid-template-columns:1fr}
-    /* Filters */
-    .filters{display:flex; gap:10px; flex-wrap:wrap}
-    .hidden{display:none !important}
+    .tag{font-size:11px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);background:var(--card)}
+    .tag.paid{background:#22c55e22;color:#22c55e}
+    .tag.fail{background:#ef444422;color:#f87171}
+    .tag.lead{background:#f59e0b22;color:#fbbf24}
     .muted{color:var(--muted)}
-    .right{margin-left:auto}
-    .status-dot{width:10px;height:10px;border-radius:999px;background:var(--danger);display:inline-block;margin-right:6px}
-    .is-ok .status-dot{background:var(--ok)}
-    /* Responsive */
-    @media (max-width: 1000px){
-      .sidebar{position:fixed; inset:0 auto 0 0; transform:translateX(-100%); transition:.25s; z-index:50}
-      .sidebar.open{transform:none}
-      .main{padding-top:56px}
-      .topbar{position:fixed; left:0; right:0}
-      .container{padding-top:76px}
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:collapse;min-width:640px}
+    th,td{padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;text-align:left}
+    th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+    .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .metric .k{font-size:clamp(22px,5vw,30px);font-weight:800}
+    .grow{flex:1}
+    /* Tab bar (mobile) */
+    .tabbar{
+      position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--border);
+      display:none;gap:6px;justify-content:space-around;padding:6px max(8px,env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-right));z-index:50
     }
-    @media (min-width: 900px){
-      .row{grid-template-columns: 1.2fr 1fr}
-    }
-    @media (min-width: 1100px){
-      .cards{grid-template-columns:repeat(12,1fr)}
-      .card.span-4{grid-column:span 4}
-      .card.span-6{grid-column:span 6}
-      .card.span-12{grid-column:span 12}
+    .tabbar a{flex:1;text-align:center;border-radius:10px;padding:8px 6px;display:flex;flex-direction:column;gap:4px;align-items:center;min-height:56px}
+    .tabbar a.active{background:var(--card);border:1px solid var(--border)}
+    .tabbar .ico{font-size:18px;line-height:1}
+    .tabbar .lbl{font-size:12px}
+    /* Mobile first */
+    @media (max-width:900px){
+      .sidebar{display:none}
+      .tabbar{display:flex}
+      .container{padding-bottom:calc(70px + env(safe-area-inset-bottom))}
+      table{min-width:560px}
+      .metrics{grid-template-columns:1fr}
     }
   </style>
 </head>
 <body>
-  <div class="app" id="app">
-    <!-- SIDEBAR -->
+  <div class="app">
+    <!-- Sidebar (esconde no mobile) -->
     <aside class="sidebar" id="sidebar">
       <div class="brand">
-        <div class="brand-badge"><span>R</span></div>
-        <div>
-          <div style="font-weight:800">RastroO</div>
-          <div class="muted" style="font-size:12px">Rastreador orgânico</div>
-        </div>
+        <div class="brand-badge">R</div>
+        <div><strong>RastroO</strong><div class="muted" style="font-size:12px">Rastreador orgânico</div></div>
       </div>
-
-      <div class="side-section">Navegação</div>
-      <nav class="nav" id="nav">
+      <nav class="nav">
         <a href="#/dashboard" data-route="dashboard" class="active">📊 Dashboard</a>
         <a href="#/leads" data-route="leads">👥 Leads</a>
-        <a href="#/reels" data-route="reels">🎬 Reels & Insights <span class="pill" id="ig-pill">IG</span></a>
+        <a href="#/reels" data-route="reels">🎬 Reels & Insights</a>
         <a href="#/connect" data-route="connect">🔌 Conectar Instagram</a>
         <a href="#/settings" data-route="settings">⚙️ Configurações</a>
       </nav>
-
-      <div class="foot">
-        <button class="btn ghost" id="themeBtn">🌓 Tema</button>
-        <button class="btn" id="collapseBtn">☰</button>
-      </div>
     </aside>
 
-    <!-- MAIN -->
+    <!-- Conteúdo -->
     <main class="main">
       <div class="topbar">
-        <button class="btn" id="openSideBtn">☰</button>
+        <button class="btn" id="themeBtn">🌓</button>
         <div class="grow"></div>
         <span id="connBadge" class="tag fail">IG: desconectado</span>
       </div>
 
       <div class="container">
-
-        <!-- BANNER CONEXÃO -->
-        <div class="banner hidden" id="connectBanner">
-          <div>
-            <div style="font-weight:800">Conecte sua conta do Instagram</div>
-            <div style="opacity:.95;font-size:13px">Para ver Reels, insights e atribuição de vendas por conteúdo, conecte sua conta uma vez.</div>
-          </div>
-          <div>
-            <a href="/public/connect.html" class="btn success">Conectar Instagram</a>
+        <!-- Banner de conexão (só aparece se não tiver conectado) -->
+        <div class="card" id="connectBanner" style="display:none; background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;border:0">
+          <div style="display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+            <div><strong>Conecte seu Instagram</strong><div style="opacity:.9">Para ver Reels & insights e atribuição.</div></div>
+            <a class="btn" style="background:#fff;color:#111" href="/public/connect.html">Conectar</a>
           </div>
         </div>
 
         <!-- DASHBOARD -->
-        <section id="view-dashboard">
-          <div class="card">
-            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-              <h2 style="margin:0">Visão geral</h2>
-              <div class="filters right">
-                <select id="rangeSelect">
-                  <option value="today">Hoje</option>
-                  <option value="7d" selected>Últimos 7 dias</option>
-                  <option value="15d">Últimos 15 dias</option>
-                  <option value="30d">Últimos 30 dias</option>
-                  <option value="custom">Personalizado…</option>
-                </select>
-                <div id="customDates" class="hidden" style="display:flex;gap:8px">
-                  <input type="date" id="dateFrom">
-                  <input type="date" id="dateTo">
-                  <button class="btn" id="applyCustom">Aplicar</button>
-                </div>
-                <button class="btn ghost" id="refreshBtn">↻ Atualizar</button>
-              </div>
-            </div>
+        <section id="v-dashboard">
+          <div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <strong>Visão geral</strong>
+            <div class="grow"></div>
+            <select id="period">
+              <option value="today">Hoje</option>
+              <option value="7d" selected>7 dias</option>
+              <option value="15d">15 dias</option>
+              <option value="30d">30 dias</option>
+              <option value="custom">Personalizado…</option>
+            </select>
+            <span id="customBox" style="display:none;gap:6px;align-items:center">
+              <input type="date" id="from"><input type="date" id="to">
+              <button class="btn" id="apply">Aplicar</button>
+            </span>
           </div>
 
-          <div class="grid cards">
-            <div class="card span-4">
-              <div class="metric">
-                <div class="s">Leads (período)</div>
-                <div class="k" id="mLeads">0</div>
-              </div>
-            </div>
-            <div class="card span-4">
-              <div class="metric">
-                <div class="s">Vendas (período)</div>
-                <div class="k" id="mSales">0</div>
-              </div>
-            </div>
-            <div class="card span-4">
-              <div class="metric">
-                <div class="s">Receita (R$)</div>
-                <div class="k" id="mRevenue">0,00</div>
-              </div>
-            </div>
-
-            <div class="card span-12">
-              <h3 style="margin:0 0 10px">Leads recentes</h3>
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Quando</th>
-                      <th>Username</th>
-                      <th>Fonte</th>
-                      <th>Etiqueta</th>
-                    </tr>
-                  </thead>
-                  <tbody id="leadsTable"></tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- LEADS -->
-        <section id="view-leads" class="hidden">
-          <div class="card">
-            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-              <h2 style="margin:0">Leads</h2>
-              <div class="filters right">
-                <select id="leadRangeSelect">
-                  <option value="today">Hoje</option>
-                  <option value="7d" selected>Últimos 7 dias</option>
-                  <option value="15d">Últimos 15 dias</option>
-                  <option value="30d">Últimos 30 dias</option>
-                  <option value="custom">Personalizado…</option>
-                </select>
-                <div id="leadCustomDates" class="hidden" style="display:flex;gap:8px">
-                  <input type="date" id="leadFrom">
-                  <input type="date" id="leadTo">
-                  <button class="btn" id="leadApply">Aplicar</button>
-                </div>
-              </div>
-            </div>
+          <div class="metrics">
+            <div class="card metric"><div class="muted">Leads</div><div class="k" id="mLeads">0</div></div>
+            <div class="card metric"><div class="muted">Vendas</div><div class="k" id="mSales">0</div></div>
+            <div class="card metric"><div class="muted">Receita</div><div class="k" id="mRev">R$ 0,00</div></div>
           </div>
 
           <div class="card">
             <div class="table-wrap">
               <table>
-                <thead>
-                  <tr>
-                    <th>Quando</th>
-                    <th>Username</th>
-                    <th>Fonte</th>
-                    <th>Etiqueta</th>
-                  </tr>
-                </thead>
-                <tbody id="leadsTableFull"></tbody>
+                <thead><tr><th>Username</th><th>Leads</th><th>Vendas</th><th>Receita</th><th>Último</th><th>Status</th></tr></thead>
+                <tbody id="tblUsers"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- LEADS -->
+        <section id="v-leads" style="display:none">
+          <div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <strong>Leads (por usuário)</strong>
+            <div class="grow"></div>
+            <select id="periodL">
+              <option value="today">Hoje</option>
+              <option value="7d" selected>7 dias</option>
+              <option value="15d">15 dias</option>
+              <option value="30d">30 dias</option>
+              <option value="custom">Personalizado…</option>
+            </select>
+            <span id="customBoxL" style="display:none;gap:6px;align-items:center">
+              <input type="date" id="fromL"><input type="date" id="toL">
+              <button class="btn" id="applyL">Aplicar</button>
+            </span>
+          </div>
+          <div class="card">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Username</th><th>Leads</th><th>Vendas</th><th>Receita</th><th>Último</th><th>Status</th></tr></thead>
+                <tbody id="tblLeads"></tbody>
               </table>
             </div>
           </div>
         </section>
 
         <!-- REELS -->
-        <section id="view-reels" class="hidden">
-          <div class="card">
-            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-              <h2 style="margin:0">Reels & Insights</h2>
-              <div class="right">
-                <a class="btn success" href="/public/connect.html">Gerenciar conexão</a>
-              </div>
-            </div>
+        <section id="v-reels" style="display:none">
+          <div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <strong>Reels & Insights</strong>
+            <div class="grow"></div>
+            <a class="btn" href="/public/connect.html">Gerenciar conexão</a>
           </div>
-
           <div class="card">
             <div class="table-wrap">
               <table>
-                <thead>
-                  <tr>
-                    <th>Reel</th>
-                    <th>Views</th>
-                    <th>Likes</th>
-                    <th>Comentários</th>
-                    <th>Leads atribuídos</th>
-                    <th>Vendas atribuídas</th>
-                  </tr>
-                </thead>
-                <tbody id="reelsTable"></tbody>
+                <thead><tr><th>Reel</th><th>Plays</th><th>Likes</th><th>Comentários</th><th>Leads</th><th>Vendas</th></tr></thead>
+                <tbody id="tblReels"></tbody>
               </table>
             </div>
           </div>
         </section>
 
         <!-- CONNECT -->
-        <section id="view-connect" class="hidden">
+        <section id="v-connect" style="display:none">
           <div class="card">
-            <h2 style="margin:0 0 10px">Conectar Instagram</h2>
-            <p class="muted" style="margin-top:0">Conecte sua conta uma vez para habilitar Reels, insights e atribuição.</p>
-            <div style="display:flex; gap:10px; flex-wrap:wrap">
-              <a href="/public/connect.html" class="btn success">Conectar / Reautorizar</a>
-              <a href="/api/ig/creds" class="btn ghost" target="_blank">Ver status técnico</a>
-            </div>
+            <strong>Conectar Instagram</strong>
+            <p class="muted">Conecte ou reautorize sua conta.</p>
+            <a class="btn" href="/public/connect.html">Conectar / Reautorizar</a>
+            <a class="btn" href="/api/ig/creds" target="_blank">Status técnico</a>
           </div>
         </section>
 
         <!-- SETTINGS -->
-        <section id="view-settings" class="hidden">
-          <div class="card">
-            <h2 style="margin:0 0 10px">Configurações</h2>
-            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-              <button class="btn" id="toggleTheme2">🌓 Alternar tema</button>
-              <a class="btn ghost" href="/public/dashboard.html" target="_blank">Abrir dashboard legado</a>
-            </div>
-            <p class="muted">Tema e atalhos. Demais configs ficam no Render/Meta.</p>
+        <section id="v-settings" style="display:none">
+          <div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <strong>Configurações</strong>
+            <div class="grow"></div>
+            <button class="btn" id="themeBtn2">Alternar tema</button>
           </div>
+          <div class="card"><span class="muted">Tema e atalhos.</span></div>
         </section>
-
       </div>
     </main>
   </div>
 
+  <!-- Tab bar (só no mobile) -->
+  <nav class="tabbar">
+    <a href="#/dashboard" data-route="dashboard" class="active"><div class="ico">📊</div><div class="lbl">Dashboard</div></a>
+    <a href="#/leads" data-route="leads"><div class="ico">👥</div><div class="lbl">Leads</div></a>
+    <a href="#/reels" data-route="reels"><div class="ico">🎬</div><div class="lbl">Reels</div></a>
+    <a href="#/connect" data-route="connect"><div class="ico">🔌</div><div class="lbl">Conectar</div></a>
+  </nav>
+
   <script>
     // ===== Tema
-    const root = document.documentElement;
-    const savedTheme = localStorage.getItem('rastroo_theme') || 'dark';
-    root.setAttribute('data-theme', savedTheme);
-    const setTheme = t => { root.setAttribute('data-theme', t); localStorage.setItem('rastroo_theme', t); };
-    document.getElementById('themeBtn').onclick = () => setTheme(root.getAttribute('data-theme')==='light'?'dark':'light');
-    document.getElementById('toggleTheme2').onclick = () => setTheme(root.getAttribute('data-theme')==='light'?'dark':'light');
+    const root=document.documentElement;
+    const setTheme=t=>{ root.setAttribute('data-theme',t); localStorage.setItem('rastroo_theme',t); };
+    setTheme(localStorage.getItem('rastroo_theme')||'dark');
+    document.getElementById('themeBtn').onclick=()=>setTheme(root.getAttribute('data-theme')==='light'?'dark':'light');
+    document.getElementById('themeBtn2')?.addEventListener('click',()=>setTheme(root.getAttribute('data-theme')==='light'?'dark':'light'));
 
-    // ===== Sidebar mobile
-    const sidebar = document.getElementById('sidebar');
-    document.getElementById('openSideBtn').onclick = () => sidebar.classList.toggle('open');
-    document.getElementById('collapseBtn').onclick = () => sidebar.classList.toggle('open');
-
-    // ===== Router simples (hash)
-    const views = {
-      dashboard: document.getElementById('view-dashboard'),
-      leads: document.getElementById('view-leads'),
-      reels: document.getElementById('view-reels'),
-      connect: document.getElementById('view-connect'),
-      settings: document.getElementById('view-settings'),
+    // ===== Navegação simples (hash)
+    const views={
+      dashboard: document.getElementById('v-dashboard'),
+      leads: document.getElementById('v-leads'),
+      reels: document.getElementById('v-reels'),
+      connect: document.getElementById('v-connect'),
+      settings: document.getElementById('v-settings')
     };
     function show(route){
-      Object.values(views).forEach(el=>el.classList.add('hidden'));
-      const v = views[route] || views.dashboard;
-      v.classList.remove('hidden');
-      // nav active
-      document.querySelectorAll('.nav a').forEach(a=>{
-        a.classList.toggle('active', a.getAttribute('data-route')===route);
-      });
-      // fecha sidebar no mobile
-      sidebar.classList.remove('open');
+      Object.values(views).forEach(el=> el.style.display='none');
+      (views[route]||views.dashboard).style.display='block';
+      document.querySelectorAll('[data-route]').forEach(a=> a.classList.toggle('active', a.getAttribute('data-route')===route));
+      if(route==='dashboard') loadSummary();
+      if(route==='leads') loadLeads();
+      if(route==='reels') loadReels();
+      if(route==='connect') updateConn();
     }
-    function routeFromHash(){
-      const r = location.hash.replace('#/','') || 'dashboard';
-      show(r);
-      if(r==='dashboard') loadSummary();
-      if(r==='leads') loadLeadsFull();
-      if(r==='reels') loadReels();
-      if(r==='connect') updateConn();
-    }
-    window.addEventListener('hashchange', routeFromHash);
+    function nav(){ const r=(location.hash.replace('#/','')||'dashboard'); show(r); }
+    window.addEventListener('hashchange', nav);
 
-    // ===== Conexão IG
-    const connBadge = document.getElementById('connBadge');
-    const connectBanner = document.getElementById('connectBanner');
-    const igPill = document.getElementById('ig-pill');
+    // ===== Util
+    function money(v){ return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+    const tag = s => s==='pago' ? '<span class="tag paid">pago</span>' : (s==='reprovado' ? '<span class="tag fail">reprovado</span>' : '<span class="tag lead">lead</span>');
 
+    // ===== Conexão IG (se /api/ig/creds existir)
+    const connBadge=document.getElementById('connBadge');
+    const connectBanner=document.getElementById('connectBanner');
     async function updateConn(){
       try{
-        const r = await fetch('/api/ig/creds'); 
-        const j = await r.json().catch(()=>({}));
-        const ok = !!(j && (j.connected || j.ok));
+        const r=await fetch('/api/ig/creds'); const j=await r.json();
+        const ok=!!(j.connected || j.igid || (j.ok && j.username));
         connBadge.textContent = ok ? 'IG: conectado' : 'IG: desconectado';
-        connBadge.className = 'tag ' + (ok ? 'paid' : 'fail');
-        connectBanner.classList.toggle('hidden', ok);
-        igPill.textContent = ok ? 'IG ✓' : 'IG';
-      }catch(e){
-        connBadge.textContent = 'IG: desconhecido';
+        connBadge.className = 'tag ' + (ok ? 'paid':'fail');
+        connectBanner.style.display = ok ? 'none' : 'block';
+      }catch(_){
+        // se o endpoint não existir, só some o banner para não encher
+        connectBanner.style.display = 'none';
+        connBadge.textContent = 'IG';
         connBadge.className = 'tag';
-        connectBanner.classList.remove('hidden');
       }
     }
-    updateConn();
 
-    // ===== Período (um seletor + custom)
-    function wirePeriod(selectId, boxId, fromId, toId, applyId, onChange){
-      const sel = document.getElementById(selectId);
-      const box = document.getElementById(boxId);
-      const from = document.getElementById(fromId);
-      const to = document.getElementById(toId);
-      const apply = document.getElementById(applyId);
-
-      const applyNow = ()=> onChange(sel.value==='custom' ? {custom:true, from:from.value, to:to.value} : {range:sel.value});
-      sel.onchange = ()=>{
-        const custom = sel.value==='custom';
-        box.classList.toggle('hidden', !custom);
-        if(!custom) applyNow();
-      };
-      apply.onclick = applyNow;
-      return applyNow;
+    // ===== Períodos
+    function rangeVal(selId, boxId, fromId, toId, applyId, onChange){
+      const sel=document.getElementById(selId), box=document.getElementById(boxId);
+      const from=document.getElementById(fromId), to=document.getElementById(toId), apply=document.getElementById(applyId);
+      function doChange(){
+        if(sel.value==='custom'){ onChange({custom:true, from:from.value, to:to.value}); }
+        else { onChange({range:sel.value}); }
+      }
+      sel.onchange=()=>{ const c=sel.value==='custom'; box.style.display=c?'inline-flex':'none'; if(!c) doChange(); };
+      apply?.addEventListener('click', doChange);
+      doChange();
     }
-
-    // ===== Dashboard summary
-    const mLeads = document.getElementById('mLeads');
-    const mSales = document.getElementById('mSales');
-    const mRevenue = document.getElementById('mRevenue');
-    const leadsTable = document.getElementById('leadsTable');
-
-    let currentRange = '7d';
-    const refreshBtn = document.getElementById('refreshBtn');
-
-    const applyPeriod = wirePeriod('rangeSelect','customDates','dateFrom','dateTo','applyCustom',(p)=>{
-      currentRange = p.custom ? `custom:${p.from},${p.to}` : (p.range||'7d');
-      loadSummary();
-    });
-    refreshBtn.onclick = ()=> loadSummary();
-
-    function fmtMoney(v){ try{ return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }catch{ return 'R$ 0,00'; } }
-    function fmtTime(ts){
-      try{ return new Date(ts).toLocaleString('pt-BR'); }catch{ return ts; }
+    function isoDate(d){ return d.toISOString().slice(0,10); }
+    function datesOf(range){
+      if(!range || range==='all') return {};
+      if(range==='today'){ const s=isoDate(new Date()); return {from:s,to:s}; }
+      const n=parseInt(range); if(!isNaN(n)){
+        const end=new Date(); const start=new Date(Date.now()-(n-1)*86400000);
+        return {from:isoDate(start), to:isoDate(end)};
+      }
+      // custom: "YYYY-MM-DD"
+      const [from,to]=range.split(','); return {from,to};
     }
-    function tagHTML(status){
-      if(status==='pago' || status==='paid') return '<span class="tag paid">pago</span>';
-      if(status==='reprovado' || status==='fail') return '<span class="tag fail">reprovado</span>';
-      return '<span class="tag lead">lead</span>';
-    }
+    // ===== DASHBOARD (usa /api/report e /api/leads)
+    const mLeads=document.getElementById('mLeads'), mSales=document.getElementById('mSales'), mRev=document.getElementById('mRev'), tblUsers=document.getElementById('tblUsers');
+    let dashRange='7d';
+    rangeVal('period','customBox','from','to','apply',(p)=>{ dashRange = p.custom? `custom:${p.from},${p.to}` : (p.range||'7d'); loadSummary(); });
 
     async function loadSummary(){
       updateConn();
-      // /api/reports/summary?range=7d
+      // resumo
       try{
-        const r = await fetch('/api/reports/summary?range='+encodeURIComponent(currentRange));
-        const j = await r.json().catch(()=>({}));
-        mLeads.textContent = j?.leads ?? 0;
-        mSales.textContent = j?.sales ?? 0;
-        mRevenue.textContent = fmtMoney(j?.revenue||0);
-      }catch(_){
-        mLeads.textContent = 0; mSales.textContent = 0; mRevenue.textContent = 'R$ 0,00';
-      }
-      // leads recentes
-      try{
-        const r2 = await fetch('/api/reports/leads?range='+encodeURIComponent(currentRange)+'&limit=20');
-        const arr = await r2.json().catch(()=>[]);
-        leadsTable.innerHTML = (arr||[]).map(o=>`
+        const {from,to}=dashRange.startsWith('custom:') ? (()=>{const s=dashRange.split(':')[1]; const [a,b]=s.split(','); return {from:a,to:b};})() : datesOf(dashRange);
+        const qs=new URLSearchParams({ ...(from?{from}:{}) , ...(to?{to}:{}) }).toString();
+        const r=await fetch('/api/report?'+qs); const j=await r.json();
+        mLeads.textContent = j?.summary?.leads ?? 0;
+        mSales.textContent = j?.summary?.sales ?? 0;
+        mRev.textContent   = money(j?.summary?.revenue ?? 0);
+
+        // tabela por @username (a partir de /api/leads)
+        const r2=await fetch('/api/leads?'+qs); const k=await r2.json();
+        const items=(k?.items||[]).slice(0,200);
+        tblUsers.innerHTML = items.map(o=>`
           <tr>
-            <td>${fmtTime(o.ts||o.time||o.created_at||Date.now())}</td>
-            <td>@${(o.username||o.creator||'-')}</td>
-            <td>${o.source||o.utm_source||'-'}</td>
-            <td>${tagHTML(o.status||o.label||'lead')}</td>
+            <td>@${o.iu||'-'}</td>
+            <td>${o.leads||0}</td>
+            <td>${o.sales||0}</td>
+            <td>${money(o.revenue||0)}</td>
+            <td>${o.last_ts ? new Date(o.last_ts).toLocaleString('pt-BR') : '-'}</td>
+            <td>${o.status ? (o.status==='pago' ? '<span class="tag paid">pago</span>' : (o.status==='reprovado' ? '<span class="tag fail">reprovado</span>' : '<span class="tag lead">lead</span>')) : '<span class="tag lead">lead</span>'}</td>
           </tr>
-        `).join('') || `<tr><td colspan="4" class="muted">Sem dados no período.</td></tr>`;
+        `).join('') || `<tr><td colspan="6" class="muted">Sem dados.</td></tr>`;
       }catch(_){
-        leadsTable.innerHTML = `<tr><td colspan="4" class="muted">Sem dados.</td></tr>`;
+        mLeads.textContent=0; mSales.textContent=0; mRev.textContent='R$ 0,00';
+        tblUsers.innerHTML = `<tr><td colspan="6" class="muted">Sem dados.</td></tr>`;
       }
     }
 
-    // ===== Leads (full)
-    const leadApplyNow = wirePeriod('leadRangeSelect','leadCustomDates','leadFrom','leadTo','leadApply',(p)=>{
-      leadRange = p.custom ? `custom:${p.from},${p.to}` : (p.range||'7d');
-      loadLeadsFull();
-    });
-    let leadRange = '7d';
-    const leadsTableFull = document.getElementById('leadsTableFull');
+    // ===== LEADS (lista igual ao dashboard, só que inteira)
+    let leadsRange='7d';
+    const tblLeads=document.getElementById('tblLeads');
+    rangeVal('periodL','customBoxL','fromL','toL','applyL',(p)=>{ leadsRange = p.custom? `custom:${p.from},${p.to}` : (p.range||'7d'); loadLeads(); });
 
-    async function loadLeadsFull(){
+    async function loadLeads(){
       try{
-        const r = await fetch('/api/reports/leads?range='+encodeURIComponent(leadRange)+'&limit=200');
-        const arr = await r.json().catch(()=>[]);
-        leadsTableFull.innerHTML = (arr||[]).map(o=>`
+        const {from,to}=leadsRange.startsWith('custom:') ? (()=>{const s=leadsRange.split(':')[1]; const [a,b]=s.split(','); return {from:a,to:b};})() : datesOf(leadsRange);
+        const qs=new URLSearchParams({ ...(from?{from}:{}) , ...(to?{to}:{}) }).toString();
+        const r=await fetch('/api/leads?'+qs); const j=await r.json();
+        const items=(j?.items||[]).slice(0,500);
+        tblLeads.innerHTML = items.map(o=>`
           <tr>
-            <td>${fmtTime(o.ts||o.time||o.created_at||Date.now())}</td>
-            <td>@${(o.username||o.creator||'-')}</td>
-            <td>${o.source||o.utm_source||'-'}</td>
-            <td>${tagHTML(o.status||o.label||'lead')}</td>
+            <td>@${o.iu||'-'}</td>
+            <td>${o.leads||0}</td>
+            <td>${o.sales||0}</td>
+            <td>${money(o.revenue||0)}</td>
+            <td>${o.last_ts ? new Date(o.last_ts).toLocaleString('pt-BR') : '-'}</td>
+            <td>${o.status ? (o.status==='pago' ? '<span class="tag paid">pago</span>' : (o.status==='reprovado' ? '<span class="tag fail">reprovado</span>' : '<span class="tag lead">lead</span>')) : '<span class="tag lead">lead</span>'}</td>
           </tr>
-        `).join('') || `<tr><td colspan="4" class="muted">Sem dados.</td></tr>`;
+        `).join('') || `<tr><td colspan="6" class="muted">Sem dados.</td></tr>`;
       }catch(_){
-        leadsTableFull.innerHTML = `<tr><td colspan="4" class="muted">Erro ao carregar.</td></tr>`;
+        tblLeads.innerHTML = `<tr><td colspan="6" class="muted">Erro ao carregar.</td></tr>`;
       }
     }
 
-    // ===== Reels
-    const reelsTable = document.getElementById('reelsTable');
+    // ===== REELS (usa /api/ig/reels)
+    const tblReels=document.getElementById('tblReels');
     async function loadReels(){
       updateConn();
       try{
-        const r = await fetch('/api/ig/reels');
-        const arr = await r.json().catch(()=>[]);
-        reelsTable.innerHTML = (arr||[]).map(o=>`
+        const r=await fetch('/api/ig/reels'); const j=await r.json();
+        const items=j.items || j || [];
+        tblReels.innerHTML = items.map(o=>`
           <tr>
-            <td><a href="${o.permalink||'#'}" target="_blank">${o.title||o.id||'Reel'}</a></td>
-            <td>${o.views ?? o.play_count ?? 0}</td>
-            <td>${o.likes ?? o.like_count ?? 0}</td>
-            <td>${o.comments ?? o.comments_count ?? 0}</td>
-            <td>${o.leads ?? 0}</td>
-            <td>${o.sales ?? 0}</td>
+            <td><a href="${o.permalink||'#'}" target="_blank">${o.caption?.slice(0,50)||o.id}</a></td>
+            <td>${o.insights?.plays ?? o.views ?? 0}</td>
+            <td>${o.like_count ?? o.likes ?? 0}</td>
+            <td>${o.comments_count ?? o.comments ?? 0}</td>
+            <td>${o.counts?.leads ?? o.leads ?? 0}</td>
+            <td>${o.counts?.sales ?? o.sales ?? 0}</td>
           </tr>
         `).join('') || `<tr><td colspan="6" class="muted">Conecte o Instagram para ver os Reels.</td></tr>`;
       }catch(_){
-        reelsTable.innerHTML = `<tr><td colspan="6" class="muted">Erro ao carregar Reels.</td></tr>`;
+        tblReels.innerHTML = `<tr><td colspan="6" class="muted">Erro ao carregar Reels.</td></tr>`;
       }
     }
 
     // start
-    routeFromHash();
-    // atalho pra dashboard refresh
-    document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && location.hash==="#/dashboard") loadSummary(); });
+    (function start(){
+      // tema salvo + conexão
+      updateConn();
+      // rota inicial
+      const r=(location.hash.replace('#/','')||'dashboard'); show(r);
+      // quando voltar p/ dashboard, recarrega
+      document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && location.hash==="#/dashboard") loadSummary(); });
+    })();
   </script>
 </body>
 </html>
