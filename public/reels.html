@@ -1,149 +1,187 @@
 <!doctype html>
 <html lang="pt-br">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>RastroO — Reels & Insights</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RastroO — Reels</title>
+  <link rel="icon" href="/public/favicon.ico" />
   <style>
     :root{
-      --bg:#0b0f14; --card:#121822; --text:#e6edf3; --muted:#9fb0c0; --accent:#5eead4; --bad:#ef4444; --ok:#22c55e;
-      --border:#1e293b; --link:#93c5fd; --chip:#0f172a;
+      --bg:#0b0e13; --card:#121622; --text:#e9edf1; --muted:#94a3b8;
+      --chip:#1f2535; --chip-text:#dbe4ff; --brand:#5b8cff;
+      --accent:#16a34a; --danger:#ef4444; --shadow:0 8px 30px rgba(0,0,0,.35);
     }
-    .light{
-      --bg:#f7fafc; --card:#ffffff; --text:#0b1220; --muted:#4a5568; --accent:#0ea5e9; --bad:#dc2626; --ok:#16a34a;
-      --border:#e2e8f0; --link:#2563eb; --chip:#f1f5f9;
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--text);font:400 15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+    a{color:inherit;text-decoration:none}
+    .wrap{max-width:1100px;margin:0 auto;padding:16px}
+    header{display:flex;align-items:center;gap:10px;margin:4px 0 12px}
+    .back{padding:8px 12px;border-radius:10px;background:var(--card);border:1px solid #242a3a}
+    .title{font-weight:700;font-size:18px}
+
+    /* carrossel */
+    .rail-wrap{position:relative}
+    .rail{
+      display:flex;gap:14px;overflow:auto;padding:4px 2px 12px;
+      scroll-snap-type:x mandatory;scroll-behavior:smooth;
+      scrollbar-width:none;
     }
-    html,body{margin:0;height:100%}
-    body{background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,Roboto}
-    .wrap{max-width:1100px;margin:0 auto;padding:24px}
-    .top{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
-    .btn{background:var(--card);color:var(--text);border:1px solid var(--border);padding:8px 12px;border-radius:10px;cursor:pointer}
-    .btn:hover{border-color:var(--accent)}
-    .inp{width:260px;max-width:45vw;background:var(--card);color:var(--text);border:1px solid var(--border);padding:8px 10px;border-radius:10px}
-    .grid{display:grid;grid-template-columns:1.2fr 3fr 1.2fr 1.2fr 1.2fr 1.2fr 1.2fr 1.2fr 1.2fr;gap:10px}
-    .head{background:var(--card);padding:10px;border:1px solid var(--border);border-radius:12px;display:grid;grid-template-columns:inherit;position:sticky;top:0;z-index:1}
-    .row{background:var(--card);padding:10px;border:1px solid var(--border);border-radius:12px;display:grid;grid-template-columns:inherit;align-items:center}
-    img.thumb{width:100%;max-width:110px;border-radius:10px;border:1px solid var(--border)}
-    .cap{color:var(--muted);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-    a{color:var(--link);text-decoration:none}
-    .kpi{display:flex;gap:6px;align-items:center;justify-content:flex-end}
-    .muted{color:var(--muted)}
-    .footer{margin-top:16px;color:var(--muted)}
-    @media (max-width:1100px){
-      .grid, .head, .row{grid-template-columns:1.5fr 3fr 1.3fr 1.3fr 1.3fr 1.3fr 1.3fr}
+    .rail::-webkit-scrollbar{display:none}
+
+    .reel{
+      flex:0 0 88vw; max-width:360px;
+      scroll-snap-align:center;
+      background:var(--card);border:1px solid #22293a;border-radius:16px;box-shadow:var(--shadow);
+      overflow:hidden;
     }
-    @media (max-width:780px){
-      .grid, .head, .row{grid-template-columns:1.6fr 3fr 1.6fr 1.6fr 1.6fr}
-      .inp{width:180px}
+
+    /* frame 9:16 */
+    .frame{position:relative;width:100%;aspect-ratio:9/16;background:#0a0d14;overflow:hidden}
+    .thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.96)}
+    .badge{
+      position:absolute;left:10px;top:10px;background:#0009;color:#fff;
+      padding:6px 10px;border-radius:999px;font:600 12px/1 system-ui;
+      border:1px solid #ffffff22
+    }
+
+    .meta{padding:10px 12px}
+    .caption{color:var(--text);font-weight:600;margin:0 0 8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{
+      display:inline-flex;align-items:center;gap:8px;
+      background:var(--chip);color:var(--chip-text);
+      padding:8px 10px;border-radius:12px;font-weight:600;border:1px solid #2a3247
+    }
+    .chip .dot{width:8px;height:8px;border-radius:50%}
+    .dot-views{background:#60a5fa}
+    .dot-likes{background:#f472b6}
+    .dot-comments{background:#facc15}
+    .dot-saves{background:#34d399}
+
+    .actions{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+    .open{
+      padding:8px 12px;border-radius:10px;border:1px solid #2a3247;background:#111727;color:#c7d2fe;
+      font-weight:700
+    }
+    .time{color:var(--muted);font-size:12px}
+
+    /* setas desktop */
+    .nav{
+      display:none;
+      position:absolute;top:50%;translate:0 -50%;
+      width:44px;height:44px;border-radius:50%;border:1px solid #2a3247;background:#0e1422aa;color:#dbe4ff;
+      place-content:center;cursor:pointer;backdrop-filter:blur(6px)
+    }
+    .nav:hover{background:#0e1422}
+    .nav.prev{left:-6px} .nav.next{right:-6px}
+
+    /* estados */
+    .empty,.error,.loading{padding:24px;text-align:center;color:var(--muted)}
+    .grid-skel{display:flex;gap:14px;overflow:hidden}
+    .skel{flex:0 0 88vw;max-width:360px;border-radius:16px;background:linear-gradient(90deg,#111627,#141a2b,#111627);background-size:300% 100%;animation:sh 1.3s infinite}
+    .skel .a{aspect-ratio:9/16;border-radius:16px 16px 0 0}
+    .skel .b{height:76px}
+    @keyframes sh{0%{background-position:0 0}100%{background-position:200% 0}}
+
+    @media(min-width:820px){
+      .reel{flex-basis:320px}
+      .nav{display:grid}
     }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="top">
-      <div style="display:flex;gap:10px;align-items:center">
-        <button id="back" class="btn">← Dashboard</button>
-        <h2 style="margin:0">Reels & Insights</h2>
+    <header>
+      <a class="back" href="/public/app.html#/dashboard">← Dashboard</a>
+      <div class="title">Reels &amp; Insights</div>
+    </header>
+
+    <div id="state" class="loading">
+      <div class="grid-skel">
+        <div class="skel"><div class="a"></div><div class="b"></div></div>
+        <div class="skel"><div class="a"></div><div class="b"></div></div>
       </div>
-      <div style="display:flex;gap:10px;align-items:center">
-        <input id="search" class="inp" placeholder="Buscar por legenda ou ID..."/>
-        <button id="theme" class="btn">🌙/☀️</button>
-        <button id="reload" class="btn">Atualizar</button>
-      </div>
+      <div style="margin-top:10px;color:#8da2c0">Carregando Reels…</div>
     </div>
 
-    <div class="head grid muted">
-      <div>Reel</div>
-      <div>Legenda</div>
-      <div class="kpi">Plays</div>
-      <div class="kpi">Reach</div>
-      <div class="kpi">Likes</div>
-      <div class="kpi">Comments</div>
-      <div class="kpi">Saved</div>
-      <div class="kpi">Leads</div>
-      <div class="kpi">Vendas</div>
+    <div class="rail-wrap" style="display:none">
+      <button class="nav prev" aria-label="Anterior">◀</button>
+      <div class="rail" id="rail"></div>
+      <button class="nav next" aria-label="Próximo">▶</button>
     </div>
-    <div id="list" style="display:flex;flex-direction:column;gap:10px"></div>
-
-    <div class="footer">Dica: alguns insights do IG podem demorar alguns minutos para atualizar.</div>
   </div>
 
   <script>
-    const root = document.documentElement;
-    const themeBtn = document.getElementById('theme');
-    function applyTheme(t){ if(t==='light'){ root.classList.add('light'); } else { root.classList.remove('light'); } localStorage.setItem('rastroo_theme', t); }
-    applyTheme(localStorage.getItem('rastroo_theme') || 'dark');
-    themeBtn.onclick = () => applyTheme(root.classList.contains('light') ? 'dark' : 'light');
+    const rail = document.getElementById('rail');
+    const state = document.getElementById('state');
+    const railWrap = document.querySelector('.rail-wrap');
 
-    document.getElementById('back').onclick = ()=> location.href = '/public/dashboard.html';
+    // setas (desktop)
+    document.querySelector('.nav.prev').onclick = () => rail.scrollBy({left: -window.innerWidth*0.7, behavior:'smooth'});
+    document.querySelector('.nav.next').onclick = () => rail.scrollBy({left:  window.innerWidth*0.7, behavior:'smooth'});
 
-    const list = document.getElementById('list');
-    const search = document.getElementById('search');
-    document.getElementById('reload').onclick = load;
-
-    let DATA = [];
-    search.oninput = () => render();
-
-    function fmt(n){ return (n||0).toLocaleString('pt-BR'); }
-
-    function row(item){
-      const el = document.createElement('div');
-      el.className = 'row grid';
-
-      const reel = document.createElement('div');
-      reel.innerHTML = `
-        <div style="display:flex;gap:10px;align-items:center">
-          <img class="thumb" loading="lazy" src="${item.thumb || ''}" alt="">
-          <div>
-            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-              <span style="opacity:.85">#${item.id}</span> <a href="${item.permalink}" target="_blank">abrir ↗</a>
-            </div>
-            <div class="muted">${new Date(item.ts).toLocaleString('pt-BR')}</div>
-          </div>
-        </div>`;
-
-      const cap = document.createElement('div'); cap.className='cap'; cap.textContent = item.caption || '—';
-
-      const kpi = n => { const d = document.createElement('div'); d.className='kpi'; d.textContent = fmt(n); return d; };
-
-      el.appendChild(reel);
-      el.appendChild(cap);
-      el.appendChild(kpi(item.insights.plays));
-      el.appendChild(kpi(item.insights.reach));
-      el.appendChild(kpi(item.like_count));
-      el.appendChild(kpi(item.comments_count));
-      el.appendChild(kpi(item.insights.saved));
-      el.appendChild(kpi(item.counts.leads));
-      el.appendChild(kpi(item.counts.sales));
-
-      return el;
-    }
+    // helper
+    const n = (x) => (x ?? 0).toLocaleString('pt-BR');
+    const since = (iso) => {
+      if(!iso) return '';
+      const d=new Date(iso), diff=(Date.now()-d.getTime())/1000;
+      const m=Math.floor(diff/60), h=Math.floor(m/60), d2=Math.floor(h/24);
+      if(d2>0) return d.toLocaleDateString('pt-BR');
+      if(h>0) return `${h} h`;
+      if(m>0) return `${m} min`;
+      return `${Math.max(1,Math.floor(diff))} s`;
+    };
 
     async function load(){
-      list.innerHTML = '<div class="row" style="justify-content:center">Carregando…</div>';
       try{
-        const r = await fetch('/api/ig/reels?limit=30');
-        const j = await r.json();
-        if(!j.ok) throw new Error(j.error || 'Falha');
-        DATA = j.items || [];
-        DATA.sort((a,b)=> (b.insights.plays||0) - (a.insights.plays||0));
-        render();
-      }catch(e){
-        list.innerHTML = '<div class="row" style="justify-content:center;color:#ef4444">' + e.message + '</div>';
-      }
-    }
+        const r = await fetch('/api/ig/reels?limit=50');
+        if(!r.ok){ throw new Error(`HTTP ${r.status}`) }
+        const payload = await r.json();
+        const list = payload.data?.filter(m => m.media_type === 'VIDEO') ?? [];
 
-    function render(){
-      const q = (search.value || '').toLowerCase().trim();
-      list.innerHTML = '';
-      const items = DATA.filter(it =>
-        !q || (String(it.id).includes(q) || (it.caption||'').toLowerCase().includes(q))
-      );
-      if(!items.length){
-        list.innerHTML = '<div class="row" style="justify-content:center">Nada encontrado.</div>';
-        return;
+        if(!list.length){
+          state.className='empty';
+          state.textContent='Sem Reels para mostrar.';
+          return;
+        }
+
+        // render
+        rail.innerHTML = '';
+        for(const m of list){
+          const el = document.createElement('article');
+          el.className = 'reel';
+          const thumb = m.thumbnail_url || m.media_url || '';
+          const views = m.video_view_count ?? m.views ?? 0;
+
+          el.innerHTML = `
+            <div class="frame">
+              <img class="thumb" loading="lazy" referrerpolicy="no-referrer" src="${thumb}" alt="Reel thumbnail" />
+              <div class="badge">Reel</div>
+            </div>
+            <div class="meta">
+              <p class="caption">${(m.caption || '').replace(/</g,'&lt;')}</p>
+              <div class="chips">
+                <span class="chip"><span class="dot dot-views"></span>${n(views)} views</span>
+                <span class="chip"><span class="dot dot-likes"></span>${n(m.like_count)} likes</span>
+                <span class="chip"><span class="dot dot-comments"></span>${n(m.comments_count)} comentários</span>
+                ${m.save_count?`<span class="chip"><span class="dot dot-saves"></span>${n(m.save_count)} salvamentos</span>`:''}
+              </div>
+              <div class="actions">
+                <a class="open" href="${m.permalink}" target="_blank" rel="noopener">Abrir no Instagram ↗</a>
+                <span class="time">• ${since(m.timestamp)}</span>
+              </div>
+            </div>
+          `;
+          rail.appendChild(el);
+        }
+
+        state.style.display='none';
+        railWrap.style.display='';
+      }catch(err){
+        console.error(err);
+        state.className='error';
+        state.innerHTML='Erro ao carregar Reels. <br><small style="color:#a3b1cc">'+(err.message||err)+'</small>';
       }
-      for (const it of items) list.appendChild(row(it));
     }
 
     load();
