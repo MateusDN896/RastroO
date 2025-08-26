@@ -1,4 +1,4 @@
-// server.js — RastroO (MVP) | DB em /tmp (gravável no Render) + CORS aberto
+// server.js — RastroO (MVP) | DB em /tmp + CORS aberto + LOG + ROTAS DE TESTE
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
@@ -9,7 +9,13 @@ const app = express();
 app.set('trust proxy', true);
 app.use(express.json({ limit: '1mb' }));
 
-// --------- CORS (temporário: libera geral) ----------
+// LOG de todas as requisições
+app.use((req, _res, next) => {
+  console.log(new Date().toISOString(), req.method, req.url);
+  next();
+});
+
+// CORS (aberto para simplificar os testes)
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Vary', 'Origin');
@@ -18,7 +24,6 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
-// ----------------------------------------------------
 
 // Arquivos estáticos (dashboard, snippet.js)
 app.use('/public', express.static(path.join(__dirname, 'public'), {
@@ -26,7 +31,7 @@ app.use('/public', express.static(path.join(__dirname, 'public'), {
   maxAge: '1h',
 }));
 
-// ===== Banco de dados em diretório gravável =====
+// ===== Banco: usar diretório gravável no Render (/tmp) =====
 const DATA_DIR = process.env.DATA_DIR || '/tmp/rastroo';
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const DB_PATH = path.join(DATA_DIR, 'rastroo.db');
@@ -87,7 +92,7 @@ db.serialize(() => {
   `);
 });
 
-// Helpers DB
+// Helpers DB (promises)
 function run(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function (err) {
@@ -111,15 +116,16 @@ function ipHashFromReq(req) {
   return crypto.createHash('sha256').update(ip).digest('hex').slice(0, 16);
 }
 
-// Rate limit simples pra /api/hit
+// Rate limit bem simples para /api/hit
 const MAX_HITS_PER_MIN = 10;
 const hitBuckets = new Map(); // `${sid}:${minute}` -> count
 
 // ---------- Rotas ----------
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({ ok: true, time: new Date().toISOString() });
 });
 
+// HIT
 app.post('/api/hit', async (req, res) => {
   try {
     const b = req.body || {};
@@ -143,13 +149,15 @@ app.post('/api/hit', async (req, res) => {
         String(utm.source || ''), String(utm.medium || ''), String(utm.campaign || '')
       ]
     );
+    console.log('HIT gravado:', { creator, sid, pagePath });
     res.json({ ok: true });
   } catch (e) {
     console.error('HIT error', e);
-    res.status(500).json({ ok: false });
+    res.status(500).json({ ok: false, error: String(e) });
   }
 });
 
+// LEAD
 app.post('/api/lead', async (req, res) => {
   try {
     const b = req.body || {};
@@ -168,13 +176,15 @@ app.post('/api/lead', async (req, res) => {
         String(utm.source || ''), String(utm.medium || ''), String(utm.campaign || '')
       ]
     );
+    console.log('LEAD gravado:', { creator, email });
     res.json({ ok: true });
   } catch (e) {
     console.error('LEAD error', e);
-    res.status(500).json({ ok: false });
+    res.status(500).json({ ok: false, error: String(e) });
   }
 });
 
+// SALE
 app.post('/api/sale', async (req, res) => {
   try {
     const b = req.body || {};
@@ -194,13 +204,15 @@ app.post('/api/sale', async (req, res) => {
         String(utm.source || ''), String(utm.medium || ''), String(utm.campaign || '')
       ]
     );
+    console.log('SALE gravada:', { creator, orderId, amount });
     res.json({ ok: true });
   } catch (e) {
     console.error('SALE error', e);
-    res.status(500).json({ ok: false });
+    res.status(500).json({ ok: false, error: String(e) });
   }
 });
 
+// REPORT
 app.get('/api/report', async (req, res) => {
   try {
     const from = req.query.from ? new Date(req.query.from + 'T00:00:00Z').getTime() : 0;
@@ -228,12 +240,48 @@ app.get('/api/report', async (req, res) => {
     res.json({ ok: true, summary, perCreator });
   } catch (e) {
     console.error('REPORT error', e);
-    res.status(500).json({ ok: false });
+    res.status(500).json({ ok: false, error: String(e) });
   }
 });
 
+// ---------- ROTAS DE TESTE (GET clicável no navegador) ----------
+app.get('/api/debug/hit', async (req, res) => {
+  try {
+    const creator = req.query.r || '@debug';
+    const sid = 'dbg-' + Date.now();
+    await run(
+      `INSERT INTO hits (ts, creator, sid, path, referrer, ip_hash, utm_source, utm_medium, utm_campaign)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [now(), creator, sid, '/debug', '', 'dbg', '', '', '']
+    );
+    res.json({ ok: true, type: 'hit', creator });
+  } catch (e) { res.status(500).json({ ok: false, error: String(e) }); }
+});
+app.get('/api/debug/lead', async (req, res) => {
+  try {
+    const creator = req.query.r || '@debug';
+    await run(
+      `INSERT INTO leads (ts, creator, sid, email, name, ip_hash, utm_source, utm_medium, utm_campaign)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [now(), creator, 'dbg', `dbg+${Date.now()}@mail.com`, 'Lead Debug', 'dbg', '', '', '']
+    );
+    res.json({ ok: true, type: 'lead', creator });
+  } catch (e) { res.status(500).json({ ok: false, error: String(e) }); }
+});
+app.get('/api/debug/sale', async (req, res) => {
+  try {
+    const creator = req.query.r || '@debug';
+    await run(
+      `INSERT OR IGNORE INTO sales (ts, creator, sid, order_id, amount, currency, ip_hash, utm_source, utm_medium, utm_campaign)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [now(), creator, 'dbg', 'ord-'+Date.now(), 29.9, 'BRL', 'dbg', '', '', '']
+    );
+    res.json({ ok: true, type: 'sale', creator });
+  } catch (e) { res.status(500).json({ ok: false, error: String(e) }); }
+});
+
 // Raiz -> dashboard
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.redirect('/public/dashboard.html');
 });
 
