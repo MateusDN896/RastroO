@@ -1,256 +1,364 @@
-// server.js — drop-in completo
+// server.js — RastroO (CommonJS, compat Render)
 
-import express from 'express';
-import path from 'path';
-import fs from 'fs';
-import crypto from 'crypto';
-import bodyParser from 'body-parser';
-import cookieSession from 'cookie-session';
-import fetch from 'node-fetch';
-import { fileURLToPath } from 'url';
+const express = require("express");
+const cors = require("cors");
+const cookieParser = require("cookie-parser");
+const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
+// fetch (Node 18 tem global; Node 16 usa node-fetch dinamicamente)
+let _fetch = global.fetch;
+if (!_fetch) {
+  _fetch = (...args) => import("node-fetch").then(({ default: f }) => f(...args));
+}
+const fetch = (...args) => _fetch(...args);
 
 const app = express();
-app.set('trust proxy', 1);
+app.set("trust proxy", 1);
+app.use(cors());
+app.use(express.json());
+app.use(cookieParser());
 
-// ====== ENV ======
-const IG_APP_ID     = process.env.IG_APP_ID || '';
-const IG_APP_SECRET = process.env.IG_APP_SECRET || '';
-const IG_REDIRECT   = process.env.IG_REDIRECT || '';
-const IG_VERIFY     = process.env.IG_VERIFY_TOKEN || 'RASTROO_VERIFY';
-const OAUTH_SECRET  = process.env.OAUTH_STATE_SECRET || 'CHANGE_ME';
-const DISK_PATH     = process.env.DISK_PATH || path.join(__dirname, 'rastroo-store.json');
+// NUNCA cachear HTML
+app.use((req, res, next) => {
+  if (req.path.endsWith(".html") || req.path === "/") {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+    res.set("Surrogate-Control", "no-store");
+  }
+  next();
+});
 
-if (!IG_APP_ID || !IG_APP_SECRET || !IG_REDIRECT) {
-  console.warn('[WARN] Defina IG_APP_ID / IG_APP_SECRET / IG_REDIRECT nas variáveis de ambiente.');
-}
+// estáticos
+const PUBLIC_DIR = path.join(__dirname, "public");
+app.use("/public", express.static(PUBLIC_DIR, { maxAge: "0", etag: true, lastModified: true }));
 
-const AUTH_SCOPES = [
-  'instagram_basic',
-  'instagram_manage_insights',
-  'pages_show_list'
-].join(',');
+// ====== ENVs ======
+const IG_APP_ID = process.env.IG_APP_ID || "";
+const IG_APP_SECRET = process.env.IG_APP_SECRET || "";
+const IG_REDIRECT = process.env.IG_REDIRECT || ""; // ex.: https://trk.rastroo.site/auth/ig/callback
+const IG_VERIFY_TOKEN = process.env.IG_VERIFY_TOKEN || "RASTROO_VERIFY";
+const OAUTH_STATE_SECRET = process.env.OAUTH_STATE_SECRET || "rastroo_state_secret";
+const FB_VER = "v20.0";
 
-// ====== STORE ======
-function loadStore() {
+// ====== STORE (DISK_PATH) ======
+const DISK_PATH =
+  process.env.DISK_PATH || path.join(__dirname, "data", "rastroo-store.json");
+(function ensureStoreFile() {
   try {
-    if (!fs.existsSync(DISK_PATH)) return { connection: null };
-    const txt = fs.readFileSync(DISK_PATH, 'utf8');
-    const json = JSON.parse(txt || '{}');
-    return json || { connection: null };
+    fs.mkdirSync(path.dirname(DISK_PATH), { recursive: true });
+    if (!fs.existsSync(DISK_PATH)) {
+      fs.writeFileSync(
+        DISK_PATH,
+        JSON.stringify({ connection: null }, null, 2),
+        "utf8"
+      );
+    }
   } catch (e) {
-    console.error('STORE_LOAD_ERR', e);
+    console.error("STORE_INIT_ERR", e);
+  }
+})();
+function readStore() {
+  try {
+    return JSON.parse(fs.readFileSync(DISK_PATH, "utf8"));
+  } catch {
     return { connection: null };
   }
 }
-function saveStore(obj) {
+function writeStore(obj) {
   try {
-    fs.mkdirSync(path.dirname(DISK_PATH), { recursive: true });
-    fs.writeFileSync(DISK_PATH, JSON.stringify(obj, null, 2));
+    fs.writeFileSync(DISK_PATH, JSON.stringify(obj, null, 2), "utf8");
   } catch (e) {
-    console.error('STORE_SAVE_ERR', e);
+    console.error("STORE_SAVE_ERR", e);
   }
 }
+let store = readStore();
 
-let store = loadStore();
-
-// ====== MIDDLEWARES ======
-app.use(bodyParser.json());
-app.use(cookieSession({
-  name: 'rastroo_sess',
-  keys: [OAUTH_SECRET],
-  sameSite: 'lax',
-  maxAge: 1000 * 60 * 60 * 24 * 30 // 30 dias
-}));
-
-// static
-app.use('/public', express.static(path.join(__dirname, 'public')));
-
-// ====== UTILS ======
-function randomState() {
-  return crypto.randomBytes(16).toString('hex');
+// ====== HELPERS ======
+function rndState() {
+  return crypto.randomBytes(16).toString("hex");
 }
-
-function ensureConnected(req, res, next) {
+function requireConnected(req, res, next) {
   const c = store.connection;
-  if (!c || !c.ig_token || !c.igid) {
-    return res.json({ ok:false, error:'not_connected' });
+  if (!c || !c.igid || !c.ig_token) {
+    return res.json({ ok: false, error: "not_connected" });
   }
   next();
 }
 
 // ====== HEALTH ======
-app.get('/api/ping', (_req,res)=>res.json({ok:true, ts:Date.now()}));
+app.get("/api/ping", (_req, res) => res.json({ ok: true, ts: Date.now() }));
 
 // ====== AUTH STATUS ======
-app.get('/api/auth/status', (_req,res)=>{
+app.get("/api/auth/status", (_req, res) => {
   const c = store.connection;
-  if (!c) return res.json({ ok:true, connected:false });
+  if (!c) return res.json({ ok: true, connected: false });
   res.json({
-    ok:true,
-    connected: !!c.ig_token && !!c.igid,
-    username: c.username || '',
-    igid: c.igid || ''
+    ok: true,
+    connected: !!(c.igid && c.ig_token),
+    username: c.username || "",
+    igid: c.igid || "",
+    page_id: c.page_id || ""
   });
 });
 
-// ====== OAUTH START ======
-app.get('/auth/ig/login', (req,res)=>{
+// ====== OAuth start ======
+const AUTH_SCOPES = [
+  "instagram_basic",
+  "instagram_manage_insights",
+  "pages_show_list"
+].join(",");
+
+app.get("/auth/ig/login", (req, res) => {
   try {
-    const state = randomState();
-    req.session.oauth_state = state;
+    if (!IG_APP_ID || !IG_APP_SECRET || !IG_REDIRECT) {
+      return res
+        .status(500)
+        .send("Config faltando: IG_APP_ID / IG_APP_SECRET / IG_REDIRECT.");
+    }
+
+    const state = rndState();
+    // cookie de state (httpOnly + Secure + Lax)
+    res.cookie("rst_oauth_state", state, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 10 * 60 * 1000
+    });
+
     const params = new URLSearchParams({
       client_id: IG_APP_ID,
       redirect_uri: IG_REDIRECT,
-      response_type: 'code',
-      state,
-      scope: AUTH_SCOPES
+      response_type: "code",
+      scope: AUTH_SCOPES,
+      state
     }).toString();
-    const url = `https://www.facebook.com/v20.0/dialog/oauth?${params}`;
-    res.redirect(url);
+
+    res.redirect(`https://www.facebook.com/${FB_VER}/dialog/oauth?${params}`);
   } catch (e) {
-    console.error('AUTH_START_ERR', e);
-    res.status(500).send('OAuth init error');
+    console.error("AUTH_START_ERR", e);
+    res.status(500).send("OAuth init error");
   }
 });
 
-// ====== OAUTH CALLBACK ======
-app.get('/auth/ig/callback', async (req,res)=>{
+// ====== OAuth callback ======
+app.get("/auth/ig/callback", async (req, res) => {
   try {
     const { code, state, error, error_description } = req.query;
 
     if (error) {
-      console.error('OAUTH_ERROR', error, error_description);
-      return res.status(400).send(`OAuth error: ${error_description || error}`);
-    }
-    if (!code || !state || state !== req.session.oauth_state) {
-      console.error('[ Erro  de retorno de chamada do OAuth  ]  Erro:  Código/estado  ausente');
-      return res.status(400).send('Código/estado ausente ou inválido');
+      console.error("OAUTH_ERROR", error, error_description);
+      return res
+        .redirect(
+          `/public/app.html#/connect?error=${encodeURIComponent(
+            error_description || error
+          )}`
+        );
     }
 
-    // troca code -> access_token
+    const stateCookie = req.cookies ? req.cookies["rst_oauth_state"] : null;
+    if (!code || !state || !stateCookie || stateCookie !== state) {
+      console.error("[OAuth callback] Código/estado ausente/ inválido");
+      return res
+        .redirect(
+          `/public/app.html#/connect?error=${encodeURIComponent(
+            "codigo_ou_state_ausente"
+          )}`
+        );
+    }
+
+    // consome cookie
+    res.clearCookie("rst_oauth_state", { path: "/" });
+
+    // troca code -> short token
     const p = new URLSearchParams({
       client_id: IG_APP_ID,
       client_secret: IG_APP_SECRET,
       redirect_uri: IG_REDIRECT,
       code
     }).toString();
-    const tokenUrl = `https://graph.facebook.com/v20.0/oauth/access_token?${p}`;
-    const rTok = await fetch(tokenUrl);
+    const tokUrl = `https://graph.facebook.com/${FB_VER}/oauth/access_token?${p}`;
+    const rTok = await fetch(tokUrl);
     const jTok = await rTok.json();
-
     if (!jTok.access_token) {
-      console.error('TOKEN_EXCHANGE_FAIL', jTok);
-      return res.status(400).send('Falha ao trocar code por token.');
+      console.error("TOKEN_EXCHANGE_FAIL", jTok);
+      return res.redirect(
+        `/public/app.html#/connect?error=${encodeURIComponent("token_exchange")}`
+      );
     }
-    const fbToken = jTok.access_token;
+    let accessToken = jTok.access_token;
 
-    // lista pages e acha uma com instagram_business_account
-    const pgs = await fetch(`https://graph.facebook.com/v20.0/me/accounts?access_token=${fbToken}`);
-    const jPgs = await pgs.json();
-    const page = (jPgs.data || []).find(p => p.instagram_business_account);
-    if (!page) {
-      console.error('NO_IG_LINKED_PAGE', jPgs);
-      return res
-        .status(400)
-        .send('Não encontrei um Instagram Business/Creator ligado a uma página nessa conta.');
+    // (opcional) troca por long-lived
+    const longUrl =
+      `https://graph.facebook.com/${FB_VER}/oauth/access_token` +
+      `?grant_type=fb_exchange_token` +
+      `&client_id=${encodeURIComponent(IG_APP_ID)}` +
+      `&client_secret=${encodeURIComponent(IG_APP_SECRET)}` +
+      `&fb_exchange_token=${encodeURIComponent(accessToken)}`;
+    const rLong = await fetch(longUrl);
+    const jLong = await rLong.json();
+    if (jLong.access_token) accessToken = jLong.access_token;
+
+    // páginas -> busca IG business/connected
+    const rPages = await fetch(
+      `https://graph.facebook.com/${FB_VER}/me/accounts?access_token=${encodeURIComponent(
+        accessToken
+      )}`
+    );
+    const jPages = await rPages.json();
+
+    let found = null;
+    if (Array.isArray(jPages.data)) {
+      for (const pg of jPages.data) {
+        const rInfo = await fetch(
+          `https://graph.facebook.com/${FB_VER}/${pg.id}` +
+            `?fields=instagram_business_account{id,username},connected_instagram_account{id,username}` +
+            `&access_token=${encodeURIComponent(accessToken)}`
+        );
+        const info = await rInfo.json();
+        let igid = null;
+        let iguser = "";
+        if (info.instagram_business_account && info.instagram_business_account.id) {
+          igid = info.instagram_business_account.id;
+          iguser = info.instagram_business_account.username || "";
+        } else if (info.connected_instagram_account && info.connected_instagram_account.id) {
+          igid = info.connected_instagram_account.id;
+          iguser = info.connected_instagram_account.username || "";
+        }
+        if (igid) {
+          if (!iguser) {
+            const rU = await fetch(
+              `https://graph.facebook.com/${FB_VER}/${igid}?fields=username&access_token=${encodeURIComponent(
+                accessToken
+              )}`
+            );
+            const jU = await rU.json();
+            iguser = jU.username || "";
+          }
+          found = { page_id: pg.id, igid, username: iguser };
+          break;
+        }
+      }
     }
 
-    const igid = page.instagram_business_account.id;
+    if (!found) {
+      return res.redirect(
+        `/public/app.html#/connect?error=${encodeURIComponent(
+          "no_ig_business_linked"
+        )}`
+      );
+    }
 
-    // pega username
-    const uResp = await fetch(`https://graph.facebook.com/v20.0/${igid}?fields=username&access_token=${fbToken}`);
-    const jU = await uResp.json();
-    const username = jU.username || '';
-
+    // salva
     store.connection = {
-      igid,
-      ig_token: fbToken,
-      username,
+      page_id: found.page_id,
+      igid: found.igid,
+      username: found.username,
+      ig_token: accessToken,
       connected_at: Date.now()
     };
-    saveStore(store);
+    writeStore(store);
 
-    // volta para app
-    res.redirect('/public/app.html#/reels');
+    // volta pro Reels
+    res.redirect("/public/app.html#/reels");
   } catch (e) {
-    console.error('AUTH_CB_ERR', e);
-    res.status(500).send('Erro na callback OAuth');
+    console.error("AUTH_CB_ERR", e);
+    res.redirect(
+      `/public/app.html#/connect?error=${encodeURIComponent("callback_exception")}`
+    );
   }
 });
 
-// ====== IG REELS (tolerante) ======
-app.get('/api/ig/reels', ensureConnected, async (_req,res)=>{
+// ====== IG: listar mídia (reels tolerante) ======
+app.get("/api/ig/reels", async (req, res) => {
   try {
-    const { igid, ig_token } = store.connection;
-
-    const FIELDS = [
-      'id','caption','media_type','media_product_type',
-      'thumbnail_url','media_url','permalink',
-      'comments_count','like_count','video_play_count',
-      'timestamp'
-    ].join(',');
-
-    const url = `https://graph.facebook.com/v20.0/${igid}/media?fields=${encodeURIComponent(FIELDS)}&limit=100&access_token=${ig_token}`;
-    const r = await fetch(url);
-    const js = await r.json();
-
-    if (js.error) {
-      console.error('IG_MEDIA_ERR', js.error);
-      // se token inválido, desconecta
-      if (js.error.code === 190) {
-        store.connection = null;
-        saveStore(store);
-        return res.json({ ok:false, error:'not_connected' });
-      }
-      return res.json({ ok:false, error:'fb_error', raw:js });
+    const c = store.connection;
+    if (!c || !c.igid || !c.ig_token) {
+      return res.json({ ok: false, error: "not_connected" });
     }
 
-    const data = js.data || [];
-    // aceita REELS OU permalink com /reel/
-    const items = data.filter(m =>
-      m.media_product_type === 'REELS' ||
-      ((m.permalink || '').includes('/reel/'))
+    const FIELDS = [
+      "id",
+      "caption",
+      "media_type",
+      "media_product_type",
+      "thumbnail_url",
+      "media_url",
+      "permalink",
+      "comments_count",
+      "like_count",
+      "video_play_count",
+      "timestamp"
+    ].join(",");
+
+    const url =
+      `https://graph.facebook.com/${FB_VER}/${c.igid}/media` +
+      `?fields=${encodeURIComponent(FIELDS)}&limit=100&access_token=${encodeURIComponent(
+        c.ig_token
+      )}`;
+
+    const r = await fetch(url);
+    const js = await r.json();
+    if (js.error) {
+      console.error("IG_MEDIA_ERR", js.error);
+      if (js.error.code === 190) {
+        // token inválido/expirado
+        store.connection = null;
+        writeStore(store);
+        return res.json({ ok: false, error: "not_connected" });
+      }
+      return res.json({ ok: false, error: "fb_error", raw: js });
+    }
+
+    const data = Array.isArray(js.data) ? js.data : [];
+    const items = data.filter(
+      (m) =>
+        m.media_product_type === "REELS" ||
+        ((m.permalink || "").includes("/reel/"))
     );
 
-    res.json({ ok:true, count: items.length, items });
+    res.json({ ok: true, count: items.length, items });
   } catch (e) {
-    console.error('IG_REELS_ROUTE_ERR', e);
-    res.json({ ok:false, error:'server_error' });
+    console.error("IG_REELS_ERR", e);
+    res.json({ ok: false, error: "server_error" });
   }
 });
 
-// ====== DEBUG opcional ======
-app.get('/api/debug/ig/media', ensureConnected, async (_req,res)=>{
+// DEBUG cru (pra ver o que a API está mandando)
+app.get("/api/debug/ig/media", async (req, res) => {
   try {
-    const { igid, ig_token } = store.connection;
-    const url = `https://graph.facebook.com/v20.0/${igid}/media?fields=id,media_product_type,permalink&limit=50&access_token=${ig_token}`;
+    const c = store.connection;
+    if (!c || !c.igid || !c.ig_token) {
+      return res.json({ ok: false, error: "not_connected" });
+    }
+    const url =
+      `https://graph.facebook.com/${FB_VER}/${c.igid}/media` +
+      `?fields=id,media_type,media_product_type,permalink,thumbnail_url,media_url,caption,timestamp` +
+      `&limit=25&access_token=${encodeURIComponent(c.ig_token)}`;
     const r = await fetch(url);
     const js = await r.json();
     res.json(js);
   } catch (e) {
-    res.json({ ok:false, error:String(e) });
+    res.json({ ok: false, error: String(e) });
   }
 });
 
-// ====== IG WEBHOOK (opcional; deixa pronto) ======
-app.get('/ig/webhook', (req,res)=>{
-  const mode = req.query['hub.mode'];
-  const token = req.query['hub.verify_token'];
-  const challenge = req.query['hub.challenge'];
-  if (mode === 'subscribe' && token === IG_VERIFY) {
+// Webhook verify (opcional)
+app.get("/ig/webhook", (req, res) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+  if (mode === "subscribe" && token === IG_VERIFY_TOKEN) {
     return res.status(200).send(challenge);
   }
-  res.status(403).send('Forbidden');
+  return res.sendStatus(403);
 });
-app.post('/ig/webhook', (req,res)=>{ res.sendStatus(200); });
 
-// ====== INDEX ======
-app.get('/', (_req,res)=>res.redirect('/public/app.html'));
+// raiz
+app.get("/", (_req, res) => res.redirect("/public/app.html"));
 
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, ()=> {
-  console.log(`=> Servidor RastroO LIGADO : ${PORT}`);
-});
+const PORT = process.env.PORT ? Number(process.env.PORT) : 10000;
+app.listen(PORT, () => console.log(`RastroO ON :${PORT}`));
