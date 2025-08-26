@@ -1,38 +1,46 @@
-// server.js — RastroO (compatível com Node < 18 e >= 18)
+// server.js — RastroO (robusto p/ Render)
+// - Rotas OAuth do Instagram (Meta): /auth/ig e /auth/ig/callback
+// - Aliases que redirecionam /auth/ig/login -> /auth/ig (evita erro de rota)
+// - Status: /api/ig/status  |  Debug: /api/debug/last_oauth  |  Health: /healthz
+// - Arquivos estáticos em /public
+// - Armazena token/IG em arquivo JSON (DISK_PATH ou ./data/ig_store.json)
 
+// ========== Imports ==========
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const fs = require("fs");
 const path = require("path");
 
-// --- fetch polyfill (garante em qualquer versão do Node)
+// fetch polyfill (funciona em Node >=16; no 18+ usa global.fetch)
 let _fetch = global.fetch;
 if (!_fetch) {
   _fetch = (...args) =>
-    import('node-fetch').then(({ default: f }) => f(...args));
+    import("node-fetch").then(({ default: f }) => f(...args));
 }
 const fetch = (...args) => _fetch(...args);
 
-// --- App base
+// ========== App base ==========
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
-// --- Público estático
+// estáticos
 const PUBLIC_DIR = path.join(__dirname, "public");
 app.use("/public", express.static(PUBLIC_DIR));
 
-// --- Porta Render
+// porta Render
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
-// --- Armazenamento em disco
-const DATA_DIR = process.env.DISK_DIR || path.join(__dirname, "data");
+// ========== Store (arquivo JSON) ==========
+const DATA_DIR =
+  process.env.DISK_DIR || path.join(__dirname, "data");
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-const IG_STORE_FILE = process.env.DISK_PATH || path.join(DATA_DIR, "ig_store.json");
 
-// Helpers de arquivo
+const IG_STORE_FILE =
+  process.env.DISK_PATH || path.join(DATA_DIR, "ig_store.json");
+
 function safeRead(file, fallback = {}) {
   try {
     if (!fs.existsSync(file)) return fallback;
@@ -51,16 +59,16 @@ function safeWrite(file, obj) {
   }
 }
 
-// Estado
 const store = safeRead(IG_STORE_FILE, { instagram: {} });
 let lastOAuth = null;
 
-// --- ENV
+// ========== ENVs ==========
 const IG_APP_ID = process.env.IG_APP_ID || "";
 const IG_APP_SECRET = process.env.IG_APP_SECRET || "";
-const IG_REDIRECT = process.env.IG_REDIRECT || "";
+const IG_REDIRECT = process.env.IG_REDIRECT || ""; // ex: https://trk.rastroo.site/auth/ig/callback
 const IG_VERIFY_TOKEN = process.env.IG_VERIFY_TOKEN || "RASTROO_VERIFY";
-const OAUTH_STATE_SECRET = process.env.OAUTH_STATE_SECRET || "state_local_dev";
+const OAUTH_STATE_SECRET =
+  process.env.OAUTH_STATE_SECRET || "state_local_dev";
 
 function envOk() {
   const miss = [];
@@ -74,11 +82,13 @@ function envOk() {
   return true;
 }
 
-// ---------- Health & raiz ----------
+// ========== Health / raiz ==========
 app.get("/", (_req, res) => res.redirect("/public/app.html"));
-app.get("/healthz", (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
+app.get("/healthz", (_req, res) =>
+  res.json({ ok: true, time: new Date().toISOString() })
+);
 
-// ---------- Status IG ----------
+// ========== Status / Debug ==========
 app.get("/api/ig/status", (_req, res) => {
   const ig = store.instagram || {};
   res.json({
@@ -89,21 +99,32 @@ app.get("/api/ig/status", (_req, res) => {
     username: ig.username || "",
     token_preview: ig.facebook_access_token
       ? ig.facebook_access_token.slice(0, 6) + "..." + ig.facebook_access_token.slice(-4)
-      : ""
+      : "",
+    page_id: ig.page_id || "",
+    updated_at: ig.updated_at || ""
   });
 });
 
-// ---------- Debug ----------
-app.get("/api/debug/last_oauth", (_req, res) => res.json({ ok: true, lastOAuth }));
+app.get("/api/debug/last_oauth", (_req, res) =>
+  res.json({ ok: true, lastOAuth })
+);
 
-// ---------- OAuth IG ----------
+// ========== Aliases p/ rotas antigas (evita "Cannot GET /auth/ig/login") ==========
+app.get(
+  ["/auth/ig/login", "/auth/ig/connect", "/auth/instagram", "/connect/instagram"],
+  (req, res) => res.redirect("/auth/ig")
+);
+
+// ========== OAuth (login) ==========
 app.get("/auth/ig", (req, res) => {
   if (!envOk()) {
     return res
       .status(500)
       .send("Config faltando: IG_APP_ID, IG_APP_SECRET e IG_REDIRECT (Render > Environment).");
   }
-  const state = Buffer.from(JSON.stringify({ t: Date.now(), s: OAUTH_STATE_SECRET })).toString("base64");
+  const state = Buffer.from(
+    JSON.stringify({ t: Date.now(), s: OAUTH_STATE_SECRET })
+  ).toString("base64");
 
   const scopes = [
     "instagram_basic",
@@ -125,6 +146,7 @@ app.get("/auth/ig", (req, res) => {
   res.redirect(url);
 });
 
+// ========== OAuth (callback) ==========
 app.get("/auth/ig/callback", async (req, res) => {
   try {
     const { code, state } = req.query;
@@ -132,13 +154,17 @@ app.get("/auth/ig/callback", async (req, res) => {
 
     // valida state
     try {
-      const parsed = JSON.parse(Buffer.from(String(state), "base64").toString("utf8"));
-      if (!parsed || parsed.s !== OAUTH_STATE_SECRET) throw new Error("State inválido ou expirado");
+      const parsed = JSON.parse(
+        Buffer.from(String(state), "base64").toString("utf8")
+      );
+      if (!parsed || parsed.s !== OAUTH_STATE_SECRET) {
+        throw new Error("State inválido ou expirado");
+      }
     } catch {
       throw new Error("State inválido ou expirado");
     }
 
-    // curto
+    // 1) troca code -> short token
     const tokenURL =
       "https://graph.facebook.com/v19.0/oauth/access_token" +
       `?client_id=${encodeURIComponent(IG_APP_ID)}` +
@@ -151,19 +177,20 @@ app.get("/auth/ig/callback", async (req, res) => {
     if (!tokenResp.ok) throw new Error("Token error: " + JSON.stringify(tokenJson));
     let accessToken = tokenJson.access_token;
 
-    // longo
+    // 2) short -> long-lived
     const longURL =
       "https://graph.facebook.com/v19.0/oauth/access_token" +
       `?grant_type=fb_exchange_token` +
       `&client_id=${encodeURIComponent(IG_APP_ID)}` +
       `&client_secret=${encodeURIComponent(IG_APP_SECRET)}` +
       `&fb_exchange_token=${encodeURIComponent(accessToken)}`;
-
     const longResp = await fetch(longURL);
     const longJson = await longResp.json();
-    if (longResp.ok && longJson.access_token) accessToken = longJson.access_token;
+    if (longResp.ok && longJson.access_token) {
+      accessToken = longJson.access_token;
+    }
 
-    // páginas
+    // 3) pega páginas e tenta achar IG via dois campos
     const pagesResp = await fetch(
       `https://graph.facebook.com/v19.0/me/accounts?access_token=${encodeURIComponent(accessToken)}`
     );
@@ -173,27 +200,37 @@ app.get("/auth/ig/callback", async (req, res) => {
     let found = null;
     if (Array.isArray(pagesJson.data)) {
       for (const pg of pagesJson.data) {
-        const igResp = await fetch(
-          `https://graph.facebook.com/v19.0/${pg.id}?fields=connected_instagram_account&access_token=${encodeURIComponent(
+        const infoResp = await fetch(
+          `https://graph.facebook.com/v19.0/${pg.id}?fields=instagram_business_account{id,username},connected_instagram_account{id,username}&access_token=${encodeURIComponent(
             accessToken
           )}`
         );
-        const igJson = await igResp.json();
-        const igAcc = igJson.connected_instagram_account;
-        if (igAcc && igAcc.id) {
-          const userResp = await fetch(
-            `https://graph.facebook.com/v19.0/${igAcc.id}?fields=username&access_token=${encodeURIComponent(
-              accessToken
-            )}`
-          );
-          const userJson = await userResp.json();
-          found = { page_id: pg.id, ig_user_id: igAcc.id, username: userJson.username || "" };
+        const infoJson = await infoResp.json();
+        let igId = null, igUser = "";
+        if (infoJson.instagram_business_account && infoJson.instagram_business_account.id) {
+          igId = infoJson.instagram_business_account.id;
+          igUser = infoJson.instagram_business_account.username || "";
+        } else if (infoJson.connected_instagram_account && infoJson.connected_instagram_account.id) {
+          igId = infoJson.connected_instagram_account.id;
+          igUser = infoJson.connected_instagram_account.username || "";
+        }
+        if (igId) {
+          if (!igUser) {
+            const uResp = await fetch(
+              `https://graph.facebook.com/v19.0/${igId}?fields=username&access_token=${encodeURIComponent(accessToken)}`
+            );
+            const uJson = await uResp.json();
+            igUser = uJson.username || "";
+          }
+          found = { page_id: pg.id, ig_user_id: igId, username: igUser };
           break;
         }
       }
     }
-    if (!found)
+
+    if (!found) {
       throw new Error("Não encontrei IG Business/Creator ligado a uma Página nesta conta da Meta.");
+    }
 
     // salva
     store.instagram = {
@@ -214,16 +251,18 @@ app.get("/auth/ig/callback", async (req, res) => {
   }
 });
 
-// ---------- Webhook (verify) ----------
+// ========== Webhook verify (opcional) ==========
 app.get("/ig/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
-  if (mode === "subscribe" && token === IG_VERIFY_TOKEN) return res.status(200).send(challenge);
+  if (mode === "subscribe" && token === IG_VERIFY_TOKEN) {
+    return res.status(200).send(challenge);
+  }
   return res.sendStatus(403);
 });
 
-// ---------- Start ----------
+// ========== Start ==========
 try {
   app.listen(PORT, () => {
     console.log(`RastroO server ON :${PORT}`);
