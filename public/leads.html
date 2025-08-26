@@ -1,0 +1,117 @@
+<!doctype html>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>RastroO — Leads</title>
+<style>
+  :root{--bg:#0b0c10;--text:#e6edf3;--muted:#9aa3b2;--card:#111319;--border:#1f2430;--head:#0e1117;--green:#22c55e;--amber:#f59e0b;--red:#ef4444}
+  .light{--bg:#f7fafc;--text:#0f172a;--muted:#64748b;--card:#ffffff;--border:#e5e7eb;--head:#f8fafc}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,Roboto}
+  .wrap{max-width:1000px;margin:0 auto;padding:20px}
+  .top{display:flex;gap:8px;align-items:center;justify-content:space-between}
+  .btn,select,input{background:var(--card);color:var(--text);border:1px solid var(--border);padding:8px 10px;border-radius:10px}
+  .grid{margin-top:12px;border:1px solid var(--border);border-radius:12px;overflow:auto}
+  table{min-width:720px;width:100%;border-collapse:collapse}
+  th,td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+  th{background:var(--head)}
+  .tag{padding:4px 8px;border-radius:999px;color:#000;font-weight:600}
+  .pago{background:var(--green);color:#041d0d}
+  .lead{background:var(--amber);color:#3a2300}
+  .reprovado{background:var(--red);color:#2d0404}
+</style>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn" onclick="location.href='/public/dashboard.html'">← Dashboard</button>
+        <strong>Leads</strong>
+      </div>
+      <div style="display:flex;gap:8px">
+        <select id="period"><option value="today">Hoje</option><option value="7d" selected>7 dias</option><option value="15d">15 dias</option><option value="30d">30 dias</option><option value="all">Tudo</option></select>
+        <input id="search" placeholder="Buscar por @username"/>
+        <button id="theme" class="btn">🌙/☀️</button>
+        <button id="refresh" class="btn">Atualizar</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <table>
+        <thead>
+          <tr><th>@username</th><th>Status</th><th>Leads</th><th>Vendas</th><th>Receita</th><th>Último evento</th><th>Ação</th></tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+  const root = document.documentElement;
+  const themeBtn = document.getElementById('theme');
+  function applyTheme(t){ if(t==='light'){ root.classList.add('light'); } else { root.classList.remove('light'); } localStorage.setItem('rastroo_theme', t); }
+  applyTheme(localStorage.getItem('rastroo_theme') || 'dark');
+  themeBtn.onclick = () => applyTheme(root.classList.contains('light') ? 'dark' : 'light');
+
+  const period = document.getElementById('period');
+  const search = document.getElementById('search');
+  const tbody  = document.getElementById('tbody');
+
+  function rangeOf(p){
+    if(p==='today'){ const d=new Date(); const s=d.toISOString().slice(0,10); return {from:s,to:s}; }
+    if(p==='7d' || p==='15d' || p==='30d'){
+      const n = parseInt(p); const a=new Date(); const b=new Date(Date.now()- (n-1)*86400000);
+      return {from:b.toISOString().slice(0,10), to:a.toISOString().slice(0,10)};
+    }
+    return {};
+  }
+
+  function tag(status){
+    const cls = status==='pago' ? 'pago' : status==='reprovado' ? 'reprovado' : 'lead';
+    return `<span class="tag ${cls}">${status}</span>`;
+  }
+
+  async function setStatus(iu, status){
+    await fetch('/api/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({iu,status})});
+    load();
+  }
+
+  function actionBtns(iu){
+    const clean = iu.replace(/^@/,'');
+    return `
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn" onclick="setStatus('${clean}','pago')">Marcar pago</button>
+        <button class="btn" onclick="setStatus('${clean}','lead')">Marcar lead</button>
+        <button class="btn" onclick="setStatus('${clean}','reprovado')">Reprovar</button>
+      </div>`;
+  }
+
+  async function load(){
+    tbody.innerHTML = '<tr><td colspan="7">Carregando…</td></tr>';
+    const {from,to} = rangeOf(period.value);
+    const qs = new URLSearchParams({ ...(from?{from}:{}) , ...(to?{to}:{}) }).toString();
+    const r = await fetch('/api/leads?'+qs); const j = await r.json();
+    if(!j.ok){ tbody.innerHTML = '<tr><td colspan="7">Erro ao carregar</td></tr>'; return; }
+    const q = (search.value||'').toLowerCase().trim();
+    const items = j.items.filter(it => !q || it.iu.toLowerCase().includes(q));
+    render(items);
+  }
+
+  function render(items){
+    tbody.innerHTML='';
+    if(!items.length){ tbody.innerHTML = '<tr><td colspan="7">Nada encontrado.</td></tr>'; return; }
+    for(const it of items){
+      const tr=document.createElement('tr');
+      tr.innerHTML = `
+        <td>@${it.iu.replace(/^@/,'')}</td>
+        <td>${tag(it.status)}</td>
+        <td>${(it.leads||0).toLocaleString('pt-BR')}</td>
+        <td>${(it.sales||0).toLocaleString('pt-BR')}</td>
+        <td>R$ ${(it.revenue||0).toLocaleString('pt-BR')}</td>
+        <td>${new Date(it.last_ts||Date.now()).toLocaleString('pt-BR')}</td>
+        <td>${actionBtns(it.iu)}</td>`;
+      tbody.appendChild(tr);
+    }
+  }
+
+  document.getElementById('refresh').onclick = load;
+  [period, search].forEach(el => el.onchange = load);
+  load();
+</script>
