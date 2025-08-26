@@ -1,5 +1,5 @@
-// server.js — RastroO (MVP) com CORS habilitado
-// -------------------------------------------------
+// server.js — RastroO (MVP) com CORS *temporário* liberado
+// --------------------------------------------------------
 const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
@@ -15,19 +15,9 @@ app.use('/public', express.static(path.join(__dirname, 'public'), {
   maxAge: '1h',
 }));
 
-// --------- CORS (permite chamadas do seu site) ----------
-const ALLOWED_ORIGINS = new Set([
-  'https://rastroo.site',
-  'https://www.rastroo.site',
-  'https://trk.rastroo.site',
-  'https://rastroo.onrender.com', // útil em testes
-]);
-
+// --------- CORS (TEMPORÁRIO: libera geral) ---------------
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.has(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
+  res.setHeader('Access-Control-Allow-Origin', '*'); // <— libera geral
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -100,7 +90,7 @@ function all(sql, params = []) {
   });
 }
 
-// Util
+// Utils
 const now = () => Date.now();
 function ipHashFromReq(req) {
   const ip =
