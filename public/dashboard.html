@@ -1,56 +1,61 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
+<!doctype html>
+<html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RastroO — Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+  <meta charset="utf-8">
+  <title>RastroO – Dashboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    :root{--bg:#0b0f1a;--card:#121a2b;--muted:#0c1322;--acc:#7c3aed;--text:#eaf0ff;--sub:#93a4bf;}
-    *{box-sizing:border-box} body{margin:0;font-family:Montserrat,system-ui;background:var(--bg);color:var(--text);}
-    header{padding:18px 16px;border-bottom:1px solid #1f2a44;background:linear-gradient(180deg,#0b0f1a,#0b0f1aee);position:sticky;top:0;z-index:5}
-    .wrap{max-width:1100px;margin:0 auto;padding:20px}
-    h1{font-size:22px;margin:0}
-    .filters{display:flex;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap}
-    input,select,button{background:var(--muted);border:1px solid #1f2a44;color:var(--text);padding:10px;border-radius:10px;outline:none}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,'Noto Sans','Liberation Sans',sans-serif;padding:24px;max-width:1000px;margin:0 auto;background:#fafafa;color:#111}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+    .card{background:#fff;border:1px solid #eee;padding:16px;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+    .stat{display:flex;gap:12px}
+    .stat .kpi{flex:1;text-align:center}
+    .kpi h2{margin:4px 0 2px;font-size:28px}
+    .kpi p{margin:0;color:#555}
+    button, select, input{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid #ddd;background:#fff}
     button{cursor:pointer}
-    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}
-    .card{background:var(--card);border:1px solid #1f2a44;padding:16px;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
-    .card h3{margin:0 0 8px 0;font-size:14px;color:var(--sub)}
-    .kpi{font-size:28px;font-weight:700}
-    table{width:100%;border-collapse:collapse;margin-top:16px}
-    th,td{padding:12px;border-bottom:1px solid #1f2a44;font-size:14px;text-align:left}
-    th{color:#a9b8d4}
-    .muted{color:var(--sub)}
-    .footer{opacity:.65;font-size:12px;margin-top:24px}
-    @media(max-width:900px){.grid{grid-template-columns:1fr}}
+    table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden}
+    th,td{padding:10px 12px;border-bottom:1px solid #eee;text-align:left}
+    th{background:#f6f6f6}
+    .muted{color:#666;font-size:13px}
+    .ok{color:#0a7a2a}
+    .err{color:#b10000}
+    .pill{display:inline-block;padding:4px 8px;border:1px solid #ddd;border-radius:999px;font-size:12px}
+    .right{margin-left:auto}
+    .footer{margin-top:24px}
+    .tiny{font-size:12px;color:#666}
+    @media (max-width:640px){.stat{flex-direction:column}}
   </style>
 </head>
 <body>
-<header class="wrap">
-  <h1>RastroO — Dashboard</h1>
-  <div class="filters">
-    <label>De <input type="date" id="from"></label>
-    <label>Até <input type="date" id="to"></label>
-    <select id="quick">
-      <option value="">Período rápido</option>
-      <option value="today">Hoje</option>
-      <option value="7d">Últimos 7 dias</option>
-      <option value="30d">Últimos 30 dias</option>
-    </select>
-    <button id="load">Carregar</button>
-  </div>
-</header>
+  <h1>RastroO – Dashboard</h1>
 
-<div class="wrap">
-  <div class="grid">
-    <div class="card"><h3>Hits</h3><div class="kpi" id="kpiHits">0</div></div>
-    <div class="card"><h3>Leads</h3><div class="kpi" id="kpiLeads">0</div></div>
-    <div class="card"><h3>Vendas</h3><div class="kpi" id="kpiSales">0</div></div>
+  <div class="row card">
+    <div class="row" style="gap:8px">
+      <label>Período rápido:
+        <select id="quick">
+          <option value="today">Hoje</option>
+          <option value="7d" selected>Últimos 7 dias</option>
+          <option value="30d">Últimos 30 dias</option>
+        </select>
+      </label>
+      <label>De: <input type="date" id="from"></label>
+      <label>Até: <input type="date" id="to"></label>
+      <button id="btnLoad">Carregar</button>
+      <button id="btnAll">Ver Tudo (2000→2099)</button>
+      <span class="right muted" id="status">…</span>
+    </div>
+    <div id="lastFetch" class="tiny muted"></div>
   </div>
 
-  <div class="card" style="margin-top:16px">
-    <h3>Por Creator</h3>
+  <div class="row stat">
+    <div class="card kpi"><h2 id="kHits">0</h2><p>Hits</p></div>
+    <div class="card kpi"><h2 id="kLeads">0</h2><p>Leads</p></div>
+    <div class="card kpi"><h2 id="kSales">0</h2><p>Vendas</p></div>
+    <div class="card kpi"><h2 id="kRev">R$ 0,00</h2><p>Receita</p></div>
+  </div>
+
+  <div class="card">
     <table>
       <thead>
         <tr>
@@ -60,75 +65,113 @@
           <th>Vendas</th>
           <th>CR H→L</th>
           <th>CR L→V</th>
-          <th>Receita (R$)</th>
+          <th>Receita</th>
         </tr>
       </thead>
-      <tbody id="tbody"></tbody>
+      <tbody id="tbody">
+        <tr><td colspan="7" class="muted">Carregue um período…</td></tr>
+      </tbody>
     </table>
   </div>
 
-  <div class="footer muted">Cole o snippet em qualquer página: <code>&lt;script&gt;window.RASTROO_API='https://seuservidor.com';&lt;/script&gt;&lt;script src="/public/snippet.js" defer&gt;&lt;/script&gt;</code></div>
-</div>
+  <div id="error" class="err"></div>
+
+  <div class="footer tiny">
+    <span>API: <code id="apiBase"></code></span>
+    <span class="right">Dica: abra uma página com <span class="pill">?r=@teste&utm_source=@teste</span> para gravar HIT</span>
+  </div>
 
 <script>
-  const API = '' // mesma origem
-  function sum(arr, key){ return arr.reduce((a,b)=> a + (b[key] || 0), 0) }
-  function toPct(x){ return (x*100).toFixed(1)+'%' }
+  // >>>> Ajuste: sempre use o mesmo host do painel <<<<
+  const API = location.origin; // ex.: https://trk.rastroo.site
+  document.getElementById('apiBase').textContent = API;
 
-  function setQuick(val){
-    const today = new Date();
-    const pad = n => String(n).padStart(2,'0');
-    const fmt = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
-    let from='', to='';
-    if(val==='today'){
-      from = fmt(today); to = fmt(today);
-    } else if(val==='7d'){
-      const d = new Date(today.getTime()-6*86400000);
-      from = fmt(d); to = fmt(today);
-    } else if(val==='30d'){
-      const d = new Date(today.getTime()-29*86400000);
-      from = fmt(d); to = fmt(today);
+  function fmtMoney(v){ return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+  function ymd(d){ const z=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate()); }
+
+  function rangeQuick(key){
+    const end = new Date();
+    const start = new Date();
+    if(key==='today'){ /* zero horas/hoje */ }
+    if(key==='7d'){ start.setDate(start.getDate()-6); }
+    if(key==='30d'){ start.setDate(start.getDate()-29); }
+    return { from: ymd(start), to: ymd(end) };
+  }
+
+  async function loadReport(from, to){
+    const url = `${API}/api/report?from=${from}&to=${to}`;
+    setStatus('Carregando…');
+    setLast(url);
+    setError('');
+    try{
+      const r = await fetch(url, { cache:'no-store' });
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const j = await r.json();
+      if(!j.ok) throw new Error('API retornou ok=false');
+
+      // KPIs
+      document.getElementById('kHits').textContent  = j.summary.hits||0;
+      document.getElementById('kLeads').textContent = j.summary.leads||0;
+      document.getElementById('kSales').textContent = j.summary.sales||0;
+      document.getElementById('kRev').textContent   = fmtMoney(j.summary.revenue||0);
+
+      // Tabela
+      const tb = document.getElementById('tbody');
+      tb.innerHTML = '';
+      if(!j.perCreator || j.perCreator.length===0){
+        tb.innerHTML = `<tr><td colspan="7" class="muted">Sem dados para o período.</td></tr>`;
+      } else {
+        j.perCreator.sort((a,b)=> (b.hits||0)-(a.hits||0));
+        for(const r of j.perCreator){
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${r.creator||'—'}</td>
+            <td>${r.hits||0}</td>
+            <td>${r.leads||0}</td>
+            <td>${r.sales||0}</td>
+            <td>${(r.cr_h_to_l||0)}%</td>
+            <td>${(r.cr_l_to_v||0)}%</td>
+            <td>${fmtMoney(r.revenue||0)}</td>`;
+          tb.appendChild(tr);
+        }
+      }
+      setStatus('OK ✅');
+    }catch(e){
+      setError('Falha ao carregar: '+e.message);
+      setStatus('Erro ❌');
     }
+  }
+
+  function setStatus(s){ document.getElementById('status').textContent = s; }
+  function setLast(u){ document.getElementById('lastFetch').textContent = 'Fetch: '+u; }
+  function setError(msg){ document.getElementById('error').textContent = msg; }
+
+  // UI handlers
+  document.getElementById('btnLoad').addEventListener('click', (ev)=>{
+    ev.preventDefault();
+    const f = document.getElementById('from').value;
+    const t = document.getElementById('to').value;
+    if(!f || !t){ setError('Defina as datas "De" e "Até" ou use o seletor rápido.'); return; }
+    loadReport(f, t);
+  });
+
+  document.getElementById('btnAll').addEventListener('click', ()=>{
+    loadReport('2000-01-01','2099-12-31');
+  });
+
+  document.getElementById('quick').addEventListener('change', ()=>{
+    const {from,to} = rangeQuick(document.getElementById('quick').value);
     document.getElementById('from').value = from;
     document.getElementById('to').value = to;
-  }
+  });
 
-  document.getElementById('quick').addEventListener('change', e=> setQuick(e.target.value));
-  document.getElementById('load').addEventListener('click', load);
-
-  async function load(){
-    const from = document.getElementById('from').value;
-    const to = document.getElementById('to').value;
-    const params = new URLSearchParams();
-    if(from) params.set('from', from);
-    if(to) params.set('to', to);
-    const r = await fetch(API + '/api/report?' + params.toString());
-    const j = await r.json();
-    const rows = j.rows || [];
-    // KPIs
-    document.getElementById('kpiHits').innerText = sum(rows, 'hits');
-    document.getElementById('kpiLeads').innerText = sum(rows, 'leads');
-    document.getElementById('kpiSales').innerText = sum(rows, 'sales');
-    // table
-    const tbody = document.getElementById('tbody');
-    tbody.innerHTML='';
-    rows.forEach(row=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${row.creatorSlug}</td>
-        <td>${row.hits||0}</td>
-        <td>${row.leads||0}</td>
-        <td>${row.sales||0}</td>
-        <td>${toPct(row.cr_hit_to_lead||0)}</td>
-        <td>${toPct(row.cr_lead_to_sale||0)}</td>
-        <td>${(row.revenue||0).toFixed(2)}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-  }
-
-  // auto load last 7d on first paint
-  setQuick('7d'); load();
+  // Inicializa: coloca 7d e carrega automaticamente
+  (function init(){
+    const {from,to} = rangeQuick('7d');
+    document.getElementById('from').value = from;
+    document.getElementById('to').value = to;
+    loadReport(from, to);
+  })();
 </script>
 </body>
 </html>
