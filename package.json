@@ -1,18 +1,18 @@
 {
-  "name": "rastroo-mvp",
+  "name": "rastroo",
   "version": "1.0.0",
-  "description": "RastroO - Rastreio Org\u00e2nico (MVP self-hosted)",
+  "private": true,
   "main": "server.js",
+  "type": "commonjs",
   "scripts": {
-    "start": "node server.js",
-    "dev": "NODE_ENV=development node server.js"
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
-    "better-sqlite3": "^9.4.0",
+    "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
-    "express": "^4.19.2",
-    "helmet": "^7.1.0",
-    "morgan": "^1.10.0",
-    "nanoid": "^5.0.7"
+    "express": "^4.19.2"
   }
 }
