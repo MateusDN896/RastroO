@@ -7,71 +7,92 @@
   <link rel="icon" href="/public/favicon.ico"/>
   <style>
     :root{
-      --bg:#0b1020;--panel:#10192c;--card:#0e1627;--text:#e6eefc;--muted:#98a5b8;
-      --border:#1f2940;--brand:#3b82f6;--ok:#10b981;--warn:#f59e0b;--danger:#ef4444;
-      --chip:#1a2236;--chip-text:#dbe4ff;--shadow:0 10px 30px rgba(0,0,0,.35);
+      --bg:#080c12;--grad:linear-gradient(135deg,#111a2e,#0f1b33,#0b1020);
+      --panel:#0d1424;--card:#0f1627;--text:#eaf0ff;--muted:#9aa8c2;
+      --border:#1b2741;--brand:#60a5fa;--ok:#10b981;--warn:#f59e0b;--danger:#ef4444;
+      --chip:#121a2f;--chip-text:#dbe4ff;--shadow:0 20px 60px rgba(0,0,0,.45);
     }
     [data-theme="light"]{
-      --bg:#f5f7fb;--panel:#ffffff;--card:#ffffff;--text:#0d1321;--muted:#5b6a80;
-      --border:#e5e9f2;--brand:#2563eb;--ok:#059669;--warn:#d97706;--danger:#dc2626;
-      --chip:#eef2ff;--chip-text:#1e293b;--shadow:0 10px 24px rgba(0,0,0,.08);
+      --bg:#f6f8fc;--grad:linear-gradient(135deg,#eef2ff,#ffffff);
+      --panel:#ffffff;--card:#ffffff;--text:#0f172a;--muted:#5b6a80;
+      --border:#e6ebf4;--brand:#2563eb;--ok:#059669;--warn:#d97706;--danger:#dc2626;
+      --chip:#eef2ff;--chip-text:#1e293b;--shadow:0 20px 40px rgba(0,0,0,.08);
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 ui-sans-serif,system-ui,Segoe UI,Roboto}
+    body{margin:0;background:var(--bg);background-image:var(--grad);background-attachment:fixed;color:var(--text);font:15px/1.5 ui-sans-serif,system-ui,Segoe UI,Roboto}
     a{color:inherit;text-decoration:none}
-    .app{min-height:100vh;display:grid;grid-template-columns:240px 1fr}
-    @media(max-width:900px){.app{grid-template-columns:1fr}}
 
-    .sidebar{background:var(--panel);border-right:1px solid var(--border);padding:16px;position:sticky;top:0;height:100vh;overflow:auto}
-    @media(max-width:900px){.sidebar{position:static;height:auto;display:flex;align-items:center;gap:10px}
+    .app{min-height:100vh;display:grid;grid-template-columns:260px 1fr}
+    @media(max-width:960px){.app{grid-template-columns:1fr}}
+
+    .sidebar{backdrop-filter:blur(8px);background:color-mix(in oklab, var(--panel) 88%, transparent);border-right:1px solid var(--border);padding:16px;position:sticky;top:0;height:100vh;overflow:auto}
+    @media(max-width:960px){.sidebar{position:static;height:auto;display:flex;align-items:center;gap:10px}
       .sidebar nav{display:flex;gap:8px;overflow:auto}
       .sidebar nav a{white-space:nowrap}
     }
     .brand{display:flex;gap:10px;align-items:center;margin-bottom:12px}
-    .brand .dot{width:10px;height:10px;border-radius:999px;background:linear-gradient(135deg,var(--brand),#8b82f6)}
+    .brand .dot{width:12px;height:12px;border-radius:999px;background:linear-gradient(135deg,var(--brand),#8b82f6)}
     .brand b{font-size:18px}
-    nav a{display:block;padding:10px 12px;border-radius:10px;border:1px solid transparent}
+    nav a{display:block;padding:10px 12px;border-radius:12px;border:1px solid transparent}
     nav a.active{background:var(--card);border-color:var(--border)}
     nav a + a{margin-top:8px}
-    @media(max-width:900px){nav a + a{margin-top:0}}
+    @media(max-width:960px){nav a + a{margin-top:0}}
 
     .main{padding:18px}
     .topbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:16px}
     .group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .btn{display:inline-flex;gap:8px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel);cursor:pointer}
+    .btn{display:inline-flex;gap:8px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--panel);cursor:pointer}
     .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
-    .tag{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);background:var(--card)}
-    .muted{color:var(--muted)}
 
+    /* HERO */
+    .hero{display:grid;gap:12px;grid-template-columns:1fr; margin-bottom:14px}
+    @media(min-width:960px){.hero{grid-template-columns:2fr 1fr}}
+    .hero-card{background:color-mix(in oklab, var(--card) 86%, transparent);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px}
+    .hero h1{margin:0 0 6px 0;font-size:18px;font-weight:700}
+    .big{font-size:34px;font-weight:800;letter-spacing:0.2px}
+    .muted{color:var(--muted)}
+    .tag{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);background:var(--card)}
+
+    /* CARDS KPI */
     .cards{display:grid;grid-template-columns:1fr;gap:12px}
     @media(min-width:700px){.cards{grid-template-columns:repeat(3,1fr)}}
-    .kpi{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
-    .kpi h4{margin:0 0 8px 0;font-size:13px;color:var(--muted)}
+    .kpi{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:var(--shadow)}
+    .kpi h4{margin:0 0 6px 0;font-size:13px;color:var(--muted)}
     .kpi b{font-size:22px}
 
-    /* ===== CARROSSEL (reels no dashboard) ===== */
+    /* REELS CARROSSEL */
     .block{margin-top:18px}
     .block h3{margin:0 0 10px 0;font-size:16px}
     .rail-wrap{position:relative}
     .rail{display:flex;gap:12px;overflow:auto;padding:2px 1px 10px;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none}
     .rail::-webkit-scrollbar{display:none}
-    .card-reel{flex:0 0 70vw;max-width:280px;scroll-snap-align:center;background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
-    @media(min-width:820px){.card-reel{flex-basis:240px}}
+    .card-reel{flex:0 0 72vw;max-width:300px;scroll-snap-align:center;background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+    @media(min-width:900px){.card-reel{flex-basis:260px}}
     .frame{position:relative;width:100%;aspect-ratio:9/16;background:#0a0d14;overflow:hidden}
     .thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-    .badge{position:absolute;left:8px;top:8px;background:#000a;color:#fff;padding:5px 8px;border-radius:999px;font:600 11px/1 system-ui;border:1px solid #ffffff22}
+    .badge{position:absolute;left:8px;top:8px;background:#000a;color:#fff;padding:5px 8px;border-radius:999px;font:700 11px/1 system-ui;border:1px solid #ffffff22}
     .meta{padding:8px 10px}
     .row{display:flex;justify-content:space-between;gap:8px}
     .chip{display:inline-flex;gap:6px;align-items:center;background:var(--chip);color:var(--chip-text);padding:6px 8px;border-radius:10px;border:1px solid var(--border);font-size:12px}
-    .money{font-weight:700}
+    .money{font-weight:800}
     .nav{display:none;position:absolute;top:50%;translate:0 -50%;width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:#0e1422aa;color:#dbe4ff;place-content:center;cursor:pointer;backdrop-filter:blur(6px)}
     .nav:hover{background:#0e1422}
     .nav.prev{left:-6px} .nav.next{right:-6px}
     @media(min-width:820px){.nav{display:grid}}
 
-    .table{width:100%;border-collapse:collapse;border:1px solid var(--border);background:var(--panel)}
-    .table th,.table td{padding:10px;border-top:1px solid var(--border);text-align:left;font-size:13px}
+    /* GEOS */
+    .geo{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:var(--shadow);margin-top:14px}
+    .geo-list{display:grid;gap:10px}
+    .geo-item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+    .flag{font-size:18px;margin-right:6px}
+    .bar{height:10px;border-radius:999px;background:color-mix(in oklab, var(--brand) 30%, transparent)}
+    .bar > i{display:block;height:10px;border-radius:999px;background:var(--brand)}
+    .geo-right{display:flex;gap:8px;align-items:center}
+    .pill{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);background:var(--panel)}
+
+    /* MISC */
+    .topbar .btn{border-radius:12px}
   </style>
 </head>
 <body>
@@ -89,8 +110,7 @@
     <main class="main">
       <div class="topbar">
         <div class="group">
-          <b id="title">Dashboard</b>
-          <span id="igTag" class="tag muted">IG: verificando…</span>
+          <span class="tag" id="igTag">IG: verificando…</span>
         </div>
         <div class="group">
           <button class="btn" id="themeBtn">🌙/☀️ Tema</button>
@@ -98,129 +118,133 @@
         </div>
       </div>
 
-      <div id="view"></div>
+      <section class="hero">
+        <div class="hero-card">
+          <h1>Faturamento do dia</h1>
+          <div class="big" id="fatHoje">—</div>
+          <div class="muted" id="vendasHoje">—</div>
+        </div>
+        <div class="hero-card">
+          <h1>Status</h1>
+          <div class="big" id="srvStatus">—</div>
+          <div class="muted" id="userIg">—</div>
+        </div>
+      </section>
+
+      <section class="cards" id="cardsTop">
+        <!-- KPIs extras se quiser -->
+      </section>
+
+      <section class="block">
+        <h3>Reels do dia (ranking por vendas)</h3>
+        <div class="rail-wrap">
+          <button class="nav prev" aria-label="Anterior">◀</button>
+          <div class="rail" id="rail"></div>
+          <button class="nav next" aria-label="Próximo">▶</button>
+        </div>
+        <div id="reelsEmpty" class="muted" style="padding:10px 2px;display:none">Sem Reels/vendas para hoje.</div>
+      </section>
+
+      <section class="geo" id="geoBox">
+        <h3 style="margin:0 0 10px 0">Geos (hoje)</h3>
+        <div class="geo-list" id="geoList">
+          <div class="muted">Carregando geos…</div>
+        </div>
+      </section>
     </main>
   </div>
 
   <script>
-    // ===== THEME =====
+    // THEME
     const THEME_KEY='rastroo_theme';
     const htmlEl=document.documentElement;
     function setTheme(t){ htmlEl.setAttribute('data-theme', t); localStorage.setItem(THEME_KEY,t); }
     function initTheme(){ setTheme(localStorage.getItem(THEME_KEY) || 'dark'); }
     function toggleTheme(){ setTheme(htmlEl.getAttribute('data-theme')==='dark'?'light':'dark'); }
-    document.getElementById('themeBtn').onclick = toggleTheme;
-    initTheme();
+    document.getElementById('themeBtn').onclick = toggleTheme; initTheme();
 
-    // ===== NAV/ROUTER =====
-    const view = document.getElementById('view');
+    // NAV
     const nav = document.getElementById('nav');
-    const titleEl = document.getElementById('title');
-    const connectBtn = document.getElementById('connectBtn');
-    const igTag = document.getElementById('igTag');
-
     function setActive(hash){[...nav.querySelectorAll('a')].forEach(a=>a.classList.toggle('active',a.getAttribute('href')===hash));}
+
+    // Helpers
+    const BRL = new Intl.NumberFormat('pt-BR',{ style:'currency', currency:'BRL' });
+    const RN = new Intl.DisplayNames(['pt-BR'], { type: 'region' });
+    function startOfTodayMs(){ const n=new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()).getTime(); }
+    function num(x){ return (x ?? 0).toLocaleString('pt-BR'); }
+    function flag(cc){ if(!cc||cc==='??') return '🏳️'; cc=cc.toUpperCase(); return [...cc].map(c=>String.fromCodePoint(127397 + c.charCodeAt())).join(''); }
+
+    // UI els
+    const igTag = document.getElementById('igTag');
+    const connectBtn = document.getElementById('connectBtn');
+    const fatHojeEl = document.getElementById('fatHoje');
+    const vendasHojeEl = document.getElementById('vendasHoje');
+    const srvStatusEl = document.getElementById('srvStatus');
+    const userIgEl = document.getElementById('userIg');
+    const rail = document.getElementById('rail');
+
+    document.querySelector('.nav.prev').onclick = () => rail.scrollBy({left: -window.innerWidth*0.7, behavior:'smooth'});
+    document.querySelector('.nav.next').onclick = () => rail.scrollBy({left:  window.innerWidth*0.7, behavior:'smooth'});
+
+    connectBtn.onclick = ()=> location.href='/auth/ig/login';
 
     async function authStatus(){
       try{
-        const r = await fetch('/api/auth/status');
-        const j = await r.json();
-        igTag.textContent = j.connected ? `IG: conectado @${j.username||''}` : 'IG: não conectado';
-        igTag.className = 'tag ' + (j.connected ? '' : 'muted');
-        connectBtn.style.display = j.connected ? 'none' : 'inline-flex';
-        return j;
-      }catch{ igTag.textContent='IG: erro'; igTag.className='tag muted'; connectBtn.style.display='inline-flex'; return {connected:false}; }
+        const s = await fetch('/api/auth/status').then(r=>r.json());
+        igTag.textContent = s.connected ? `IG: conectado @${s.username||''}` : 'IG: não conectado';
+        igTag.className = 'tag ' + (s.connected ? '' : 'muted');
+        connectBtn.style.display = s.connected ? 'none' : 'inline-flex';
+        userIgEl.textContent = s.connected ? '@'+(s.username||'') : 'Conecte sua conta';
+        return s;
+      }catch{
+        igTag.textContent='IG: erro'; igTag.className='tag muted'; connectBtn.style.display='inline-flex';
+        return { connected:false };
+      }
     }
-    connectBtn.onclick = ()=> location.href='/auth/ig/login';
 
-    // ===== Helpers =====
-    const BRL = new Intl.NumberFormat('pt-BR',{ style:'currency', currency:'BRL' });
-    function startOfTodayMs(){
-      const now = new Date();
-      return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    }
-    function num(x){ return (x ?? 0).toLocaleString('pt-BR'); }
-
-    // ===== DASHBOARD =====
-    async function pageDashboard(){
-      setActive('#/dashboard'); titleEl.textContent='Dashboard';
-      await authStatus();
-      view.innerHTML = `
-        <div class="cards">
-          <div class="kpi"><h4>Status do servidor</h4><b id="kpiSrv">-</b></div>
-          <div class="kpi"><h4>Faturamento do dia</h4><b id="kpiFat">—</b></div>
-          <div class="kpi"><h4>Vendas (hoje)</h4><b id="kpiVendas">—</b></div>
-        </div>
-
-        <div class="block">
-          <h3>Reels do dia (ordem por vendas)</h3>
-          <div class="rail-wrap">
-            <button class="nav prev" aria-label="Anterior">◀</button>
-            <div class="rail" id="rail"></div>
-            <button class="nav next" aria-label="Próximo">▶</button>
-          </div>
-          <div id="reelsEmpty" class="muted" style="padding:10px 2px;display:none">Sem Reels/vendas para hoje.</div>
-        </div>
-      `;
-
-      // setas carrossel
-      const rail = document.getElementById('rail');
-      document.querySelector('.nav.prev').onclick = () => rail.scrollBy({left: -window.innerWidth*0.7, behavior:'smooth'});
-      document.querySelector('.nav.next').onclick = () => rail.scrollBy({left:  window.innerWidth*0.7, behavior:'smooth'});
-
-      // servidor
+    async function loadHero(){
       try{
         const p = await fetch('/api/ping').then(r=>r.json());
-        document.getElementById('kpiSrv').textContent = p.ok ? 'Online' : 'Offline';
-      }catch{ document.getElementById('kpiSrv').textContent='Offline'; }
+        srvStatusEl.textContent = p.ok ? 'Online' : 'Offline';
+      }catch{ srvStatusEl.textContent='Offline'; }
 
-      // período hoje (cliente calcula no próprio fuso)
-      const since = startOfTodayMs();
-      const until = Date.now();
-
-      // vendas por reel
+      const since = startOfTodayMs(), until = Date.now();
       const sales = await fetch(`/api/sales/by-reel?since=${since}&until=${until}`).then(r=>r.json()).catch(()=>({ok:false}));
-      const totalRevenue = BRL.format(sales.total_revenue || 0);
-      const totalSales = sales.total_sales || 0;
-      document.getElementById('kpiFat').textContent = totalRevenue;
-      document.getElementById('kpiVendas').textContent = num(totalSales);
+      fatHojeEl.textContent = BRL.format(sales.total_revenue || 0);
+      vendasHojeEl.textContent = `${num(sales.total_sales || 0)} vendas`;
+    }
 
-      // reels IG
+    async function loadReels(){
+      const sales = await fetch(`/api/sales/by-reel?since=${startOfTodayMs()}&until=${Date.now()}`).then(r=>r.json()).catch(()=>({ok:false}));
       const reels = await fetch('/api/ig/reels').then(r=>r.json()).catch(()=>({ok:false}));
-      if (!reels.ok) {
+
+      if (!reels.ok || !reels.items?.length){
         document.getElementById('reelsEmpty').style.display='block';
+        rail.innerHTML = '';
         return;
       }
 
-      // monta ranking por vendas; se não houver vendas, mantém a ordem original
       const byReel = sales.by_reel || {};
-      const items = reels.items || [];
-
-      // ordena por vendas desc (usando id e fallback por permalink)
-      const scored = items.map(m=>{
-        const keyId = byReel[m.id];
-        const keyLink = byReel[m.permalink];
-        const s = (keyId?.sales || keyLink?.sales || 0);
-        const r$ = (keyId?.revenue || keyLink?.revenue || 0);
+      const scored = reels.items.map(m=>{
+        const hitId = byReel[m.id];
+        const hitLink = byReel[m.permalink];
+        const s = (hitId?.sales || hitLink?.sales || 0);
+        const r$ = (hitId?.revenue || hitLink?.revenue || 0);
         return { m, sales: s, revenue: r$ };
       }).sort((a,b)=> b.sales - a.sales || b.revenue - a.revenue);
 
-      if (!scored.length) {
-        document.getElementById('reelsEmpty').style.display='block';
-        return;
-      }
+      if (!scored.length){ document.getElementById('reelsEmpty').style.display='block'; rail.innerHTML=''; return; }
 
-      // render cards
-      rail.innerHTML = scored.map((it, idx)=>{
+      rail.innerHTML = scored.map((it,idx)=>{
         const m = it.m;
         const thumb = m.thumbnail_url || m.media_url || '';
-        const isTop = it.sales>0 && idx===0;
-        const topBadge = isTop ? `<span class="badge" style="background:#063; border-color:#0a4">+ vendido</span>` : `<span class="badge">Reel</span>`;
+        const top = it.sales>0 && idx===0;
+        const badge = top ? `<span class="badge" style="background:#063;border-color:#0a4">+ vendido</span>` : `<span class="badge">Reel</span>`;
         return `
           <a class="card-reel" href="${m.permalink}" target="_blank" rel="noopener">
             <div class="frame">
               <img class="thumb" loading="lazy" referrerpolicy="no-referrer" src="${thumb}" alt="Reel"/>
-              ${topBadge}
+              ${badge}
             </div>
             <div class="meta">
               <div class="row">
@@ -231,47 +255,73 @@
           </a>
         `;
       }).join('');
+      document.getElementById('reelsEmpty').style.display='none';
     }
 
-    // ===== REELS (página dedicada, se quiser usar) =====
-    async function pageReels(){
-      setActive('#/reels'); titleEl.textContent='Reels & Insights';
-      const st = await authStatus();
-      if (!st.connected) {
-        view.innerHTML = `<div class="kpi"><h4>Conectar</h4><b>Instagram</b><div class="muted" style="margin-top:8px">Conecte em <a href="#/connect" style="text-decoration:underline">Conectar Instagram</a>.</div></div>`;
-        return;
-      }
-      // Reaproveite seu reels.html se preferir — aqui deixamos um placeholder simples:
-      view.innerHTML = `<div class="muted">Use o dashboard para ver os Reels do dia. (Opcional: manter /public/reels.html separado para lista completa.)</div>`;
+    async function loadGeos(){
+      const since = startOfTodayMs(), until = Date.now();
+      const j = await fetch(`/api/geo/summary?since=${since}&until=${until}`).then(r=>r.json()).catch(()=>({ok:false}));
+      const box = document.getElementById('geoList');
+      if (!j.ok){ box.innerHTML = `<div class="muted">Erro ao carregar geos.</div>`; return; }
+      if (!j.countries?.length){ box.innerHTML = `<div class="muted">Sem geos para hoje.</div>`; return; }
+
+      const total = Math.max(1, j.total_leads + j.total_sales);
+      const top = j.countries.slice(0, 6);
+      box.innerHTML = top.map(c=>{
+        const totalC = c.leads + c.sales;
+        const pct = Math.round((totalC/total)*100);
+        const name = (c.code && c.code!=="??") ? (RN.of(c.code) || c.code) : 'Desconhecido';
+        return `
+          <div class="geo-item">
+            <div>
+              <div class="muted" style="margin-bottom:6px"><span class="flag">${flag(c.code)}</span> ${name}</div>
+              <div class="bar"><i style="width:${Math.min(100,pct)}%"></i></div>
+            </div>
+            <div class="geo-right">
+              <span class="pill">Leads: <b>${num(c.leads)}</b></span>
+              <span class="pill">Vendas: <b>${num(c.sales)}</b></span>
+            </div>
+          </div>
+        `;
+      }).join('');
     }
 
-    // ===== CONNECT =====
-    async function pageConnect(){
-      setActive('#/connect'); titleEl.textContent='Conectar Instagram';
-      const st = await authStatus();
-      view.innerHTML = st.connected
-        ? `<div class="kpi"><h4>Conta conectada</h4><b>@${st.username||''}</b><div class="muted" style="margin-top:8px">Pronto! Os Reels já aparecem no Dashboard.</div></div>`
-        : `<div class="kpi"><h4>Conectar</h4><b>Instagram (Meta)</b><div class="muted" style="margin:10px 0">Sua conta precisa ser <b>Business/Creator</b> e estar ligada a uma <b>Página do Facebook</b>.</div><button class="btn primary" onclick="location.href='/auth/ig/login'">Conectar com Instagram</button></div>`;
-    }
-
-    // ===== CONFIG =====
-    async function pageConfig(){
-      setActive('#/config'); titleEl.textContent='Configurações';
+    async function pageDashboard(){
+      setActive('#/dashboard');
       await authStatus();
-      view.innerHTML = `
-        <div class="kpi">
-          <h4>Tema</h4>
-          <div class="group"><button class="btn" onclick="setTheme('dark')">Escuro</button><button class="btn" onclick="setTheme('light')">Claro</button></div>
-        </div>
-      `;
+      await loadHero();
+      await loadReels();
+      await loadGeos();
+    }
+    async function pageReels(){
+      setActive('#/reels');
+      document.querySelector('.hero').style.display='none';
+      document.getElementById('geoBox').style.display='none';
+      document.getElementById('cardsTop').style.display='none';
+      // direciona para carrossel do dashboard (ficou melhor integrado)
+      location.hash = '#/dashboard';
+    }
+    async function pageConnect(){
+      setActive('#/connect');
+      const s = await authStatus();
+      alert(s.connected ? 'Conta já conectada.' : 'Clique em "Conectar Instagram".');
+      if (!s.connected) connectBtn.focus();
+      location.hash = '#/dashboard';
+    }
+    async function pageConfig(){
+      setActive('#/config');
+      toggleTheme();
+      location.hash = '#/dashboard';
     }
 
-    // ===== ROUTER =====
     async function router(){
       const h = (location.hash || '#/dashboard');
       if (h.startsWith('#/reels')) return pageReels();
       if (h.startsWith('#/connect')) return pageConnect();
       if (h.startsWith('#/config')) return pageConfig();
+      document.querySelector('.hero').style.display='';
+      document.getElementById('geoBox').style.display='';
+      document.getElementById('cardsTop').style.display='';
       return pageDashboard();
     }
     window.addEventListener('hashchange', router);
