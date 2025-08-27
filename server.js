@@ -30,7 +30,7 @@ app.use((req,res,next)=>{
 const PUBLIC_DIR = path.join(__dirname,"public");
 app.use("/public", express.static(PUBLIC_DIR, { maxAge:"0", etag:true, lastModified:true }));
 
-// ENVs
+// ENVs (já estão certas no Render — não precisa mexer)
 const IG_APP_ID      = process.env.IG_APP_ID      || "";
 const IG_APP_SECRET  = process.env.IG_APP_SECRET  || "";
 const IG_REDIRECT    = process.env.IG_REDIRECT    || ""; // ex.: https://trk.rastroo.site/auth/ig/callback
@@ -45,7 +45,6 @@ function writeStore(o){ fs.writeFileSync(DISK_PATH, JSON.stringify(o, null, 2), 
 function setStore(p){ const s=readStore(); Object.assign(s,p); writeStore(s); return s; }
 
 // helpers
-const BR = (j)=>JSON.stringify(j,null,2);
 function oauthUrl(state){
   const scope = [
     "pages_show_list","instagram_basic","instagram_manage_insights",
@@ -137,13 +136,10 @@ app.post("/api/debug/force-token", async (req,res)=>{
     let page=null, ig=null;
     for (const pg of pages.data) {
       const info = await (await fetch(
-        `https://graph.facebook.com/${FB_VER}/${pg.id}?fields=name,instagram_business_account{id,username}&access_token=${encodeURIComponent(token)}`
+        `https://graph.facebook.com/${FB_VER}/${pg.id}?fields=name,instagram_business_account{id,username},connected_instagram_account{id,username}&access_token=${encodeURIComponent(token)}`
       )).json();
-      if (info.instagram_business_account?.id) {
-        page = { id: pg.id, name: info.name };
-        ig = info.instagram_business_account; // {id, username}
-        break;
-      }
+      const igAcct = info.instagram_business_account || info.connected_instagram_account;
+      if (igAcct?.id) { page = { id: pg.id, name: info.name }; ig = igAcct; break; }
     }
     if (!ig?.id) return res.json({ ok:false, error:"no_ig_business_linked", hint:"Conecte o IG à Página (FB → Configurações → Contas vinculadas → Instagram)." });
 
@@ -202,9 +198,10 @@ app.get("/auth/ig/callback", async (req,res)=>{
     let page=null, ig=null;
     for (const pg of (pages.data||[])) {
       const info = await (await fetch(
-        `https://graph.facebook.com/${FB_VER}/${pg.id}?fields=name,instagram_business_account{id,username}&access_token=${encodeURIComponent(t.access_token)}`
+        `https://graph.facebook.com/${FB_VER}/${pg.id}?fields=name,instagram_business_account{id,username},connected_instagram_account{id,username}&access_token=${encodeURIComponent(t.access_token)}`
       )).json();
-      if (info.instagram_business_account?.id) { page={id:pg.id,name:info.name}; ig=info.instagram_business_account; break; }
+      const igAcct = info.instagram_business_account || info.connected_instagram_account;
+      if (igAcct?.id) { page={id:pg.id,name:info.name}; ig=igAcct; break; }
     }
     if (!ig?.id) return res.status(400).send("Não encontrei IG Business/Creator ligado a uma Página desta conta.");
     setStore({ connection: { token:{ access_token: t.access_token, saved_at: Date.now() }, page, ig } });
