@@ -28,6 +28,11 @@ app.use((req, res, next) => {
   }
   next();
 });
+// ===== Alias de conveniência para o OAuth do Instagram =====
+// Se alguém acessar /auth/ig ou /auth/instagram, redireciona para o fluxo correto.
+app.get(['/auth/ig', '/auth/instagram'], (req, res) => {
+  res.redirect('/auth/ig/login');
+});
 
 // estáticos
 const PUBLIC_DIR = path.join(__dirname, "public");
