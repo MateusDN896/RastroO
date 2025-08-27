@@ -1,4 +1,4 @@
-// server.js — RastroO (CommonJS, compat Render)
+// server.js — RastroO (CommonJS) com IG + agregador de vendas por Reel
 
 const express = require("express");
 const cors = require("cors");
@@ -17,10 +17,10 @@ const fetch = (...args) => _fetch(...args);
 const app = express();
 app.set("trust proxy", 1);
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
-// NUNCA cachear HTML
+// NUNCA cachear HTML (evita precisar hard refresh)
 app.use((req, res, next) => {
   if (req.path.endsWith(".html") || req.path === "/") {
     res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
@@ -44,17 +44,23 @@ const OAUTH_STATE_SECRET = process.env.OAUTH_STATE_SECRET || "rastroo_state_secr
 const FB_VER = "v20.0";
 
 // ====== STORE (DISK_PATH) ======
-const DISK_PATH =
-  process.env.DISK_PATH || path.join(__dirname, "data", "rastroo-store.json");
+const DISK_PATH = process.env.DISK_PATH || path.join(__dirname, "data", "rastroo-store.json");
 (function ensureStoreFile() {
   try {
     fs.mkdirSync(path.dirname(DISK_PATH), { recursive: true });
     if (!fs.existsSync(DISK_PATH)) {
       fs.writeFileSync(
         DISK_PATH,
-        JSON.stringify({ connection: null }, null, 2),
+        JSON.stringify({ connection: null, events: [] }, null, 2),
         "utf8"
       );
+    } else {
+      // se existir sem "events", acrescenta
+      const cur = JSON.parse(fs.readFileSync(DISK_PATH, "utf8") || "{}");
+      if (!cur.events) {
+        cur.events = [];
+        fs.writeFileSync(DISK_PATH, JSON.stringify(cur, null, 2), "utf8");
+      }
     }
   } catch (e) {
     console.error("STORE_INIT_ERR", e);
@@ -64,7 +70,7 @@ function readStore() {
   try {
     return JSON.parse(fs.readFileSync(DISK_PATH, "utf8"));
   } catch {
-    return { connection: null };
+    return { connection: null, events: [] };
   }
 }
 function writeStore(obj) {
@@ -118,7 +124,6 @@ app.get("/auth/ig/login", (req, res) => {
         .status(500)
         .send("Config faltando: IG_APP_ID / IG_APP_SECRET / IG_REDIRECT.");
     }
-
     const state = rndState();
     // cookie de state (httpOnly + Secure + Lax)
     res.cookie("rst_oauth_state", state, {
@@ -170,7 +175,6 @@ app.get("/auth/ig/callback", async (req, res) => {
         );
     }
 
-    // consome cookie
     res.clearCookie("rst_oauth_state", { path: "/" });
 
     // troca code -> short token
@@ -191,7 +195,7 @@ app.get("/auth/ig/callback", async (req, res) => {
     }
     let accessToken = jTok.access_token;
 
-    // (opcional) troca por long-lived
+    // long-lived (opcional)
     const longUrl =
       `https://graph.facebook.com/${FB_VER}/oauth/access_token` +
       `?grant_type=fb_exchange_token` +
@@ -252,7 +256,7 @@ app.get("/auth/ig/callback", async (req, res) => {
       );
     }
 
-    // salva
+    store = readStore();
     store.connection = {
       page_id: found.page_id,
       igid: found.igid,
@@ -262,7 +266,6 @@ app.get("/auth/ig/callback", async (req, res) => {
     };
     writeStore(store);
 
-    // volta pro Reels
     res.redirect("/public/app.html#/reels");
   } catch (e) {
     console.error("AUTH_CB_ERR", e);
@@ -275,7 +278,7 @@ app.get("/auth/ig/callback", async (req, res) => {
 // ====== IG: listar mídia (reels tolerante) ======
 app.get("/api/ig/reels", async (req, res) => {
   try {
-    const c = store.connection;
+    const c = readStore().connection;
     if (!c || !c.igid || !c.ig_token) {
       return res.json({ ok: false, error: "not_connected" });
     }
@@ -294,9 +297,10 @@ app.get("/api/ig/reels", async (req, res) => {
       "timestamp"
     ].join(",");
 
+    const limit = Math.min(100, parseInt(req.query.limit || "100", 10));
     const url =
       `https://graph.facebook.com/${FB_VER}/${c.igid}/media` +
-      `?fields=${encodeURIComponent(FIELDS)}&limit=100&access_token=${encodeURIComponent(
+      `?fields=${encodeURIComponent(FIELDS)}&limit=${limit}&access_token=${encodeURIComponent(
         c.ig_token
       )}`;
 
@@ -305,7 +309,7 @@ app.get("/api/ig/reels", async (req, res) => {
     if (js.error) {
       console.error("IG_MEDIA_ERR", js.error);
       if (js.error.code === 190) {
-        // token inválido/expirado
+        store = readStore();
         store.connection = null;
         writeStore(store);
         return res.json({ ok: false, error: "not_connected" });
@@ -327,10 +331,86 @@ app.get("/api/ig/reels", async (req, res) => {
   }
 });
 
-// DEBUG cru (pra ver o que a API está mandando)
+// ====== TRACK: registrar eventos (sale/lead) ======
+app.post("/api/track", (req, res) => {
+  try {
+    const { type, reel_id, permalink, amount, username, meta } = req.body || {};
+    if (!type) return res.status(400).json({ ok: false, error: "type_required" });
+    if (!["sale", "lead"].includes(type)) {
+      return res.status(400).json({ ok: false, error: "type_invalid" });
+    }
+    const ev = {
+      type,
+      reel_id: reel_id || null,
+      permalink: permalink || null,
+      amount: Number(amount || 0),
+      username: username || null,
+      meta: meta || null,
+      ts: Date.now()
+    };
+    store = readStore();
+    store.events = store.events || [];
+    store.events.push(ev);
+    writeStore(store);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("TRACK_ERR", e);
+    res.status(500).json({ ok: false, error: "server_error" });
+  }
+});
+
+// ====== SALES: agregado por Reel ======
+app.get("/api/sales/by-reel", (req, res) => {
+  try {
+    // since/until em epoch ms (cliente calcula em fuso local)
+    const since = Number(req.query.since || 0);
+    const until = Number(req.query.until || Date.now() + 1);
+
+    const evs = (readStore().events || []).filter(
+      (e) =>
+        e.type === "sale" &&
+        (!since || e.ts >= since) &&
+        (!until || e.ts < until)
+    );
+
+    const byKey = {};
+    let totalSales = 0;
+    let totalRevenue = 0;
+
+    for (const e of evs) {
+      const key = e.reel_id || e.permalink || "desconhecido";
+      if (!byKey[key]) byKey[key] = { sales: 0, revenue: 0, last_ts: 0 };
+      byKey[key].sales += 1;
+      byKey[key].revenue += Number(e.amount || 0);
+      if (e.ts > byKey[key].last_ts) byKey[key].last_ts = e.ts;
+      totalSales += 1;
+      totalRevenue += Number(e.amount || 0);
+    }
+
+    // ranking top
+    const ranking = Object.entries(byKey)
+      .map(([k, v]) => ({ key: k, ...v }))
+      .sort((a, b) => b.sales - a.sales || b.revenue - a.revenue);
+
+    res.json({
+      ok: true,
+      since,
+      until,
+      total_sales: totalSales,
+      total_revenue: totalRevenue,
+      by_reel: byKey,
+      ranking
+    });
+  } catch (e) {
+    console.error("BY_REEL_ERR", e);
+    res.status(500).json({ ok: false, error: "server_error" });
+  }
+});
+
+// DEBUG cru
 app.get("/api/debug/ig/media", async (req, res) => {
   try {
-    const c = store.connection;
+    const c = readStore().connection;
     if (!c || !c.igid || !c.ig_token) {
       return res.json({ ok: false, error: "not_connected" });
     }
