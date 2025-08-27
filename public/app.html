@@ -7,54 +7,85 @@
   <link rel="icon" href="/public/favicon.ico"/>
   <style>
     :root{
-      --bg:#080c12;--grad:linear-gradient(135deg,#111a2e,#0f1b33,#0b1020);
-      --panel:#0d1424;--card:#0f1627;--text:#eaf0ff;--muted:#9aa8c2;
-      --border:#1b2741;--brand:#60a5fa;--ok:#10b981;--warn:#f59e0b;--danger:#ef4444;
-      --chip:#121a2f;--chip-text:#dbe4ff;--shadow:0 20px 60px rgba(0,0,0,.45);
+      --bg:#070b12;--grad:radial-gradient(1200px 800px at 20% -10%,#12203a 0%,transparent 60%),
+                       radial-gradient(800px 600px at 110% 10%,#1b1535 0%,transparent 60%),
+                       linear-gradient(180deg,#0a0f1a 0%,#080c12 100%);
+      --panel:color-mix(in oklab, #0f1a2e 88%, transparent);
+      --card:#0f1627;--text:#eaf0ff;--muted:#9aa8c2;--border:#1b2741;
+      --brand:#7c8cff;--brand2:#60a5fa;--ok:#10b981;--warn:#f59e0b;--danger:#ef4444;
+      --chip:#121a2f;--chip-text:#dbe4ff;--shadow:0 18px 60px rgba(0,0,0,.45);
     }
     [data-theme="light"]{
-      --bg:#f6f8fc;--grad:linear-gradient(135deg,#eef2ff,#ffffff);
-      --panel:#ffffff;--card:#ffffff;--text:#0f172a;--muted:#5b6a80;
-      --border:#e6ebf4;--brand:#2563eb;--ok:#059669;--warn:#d97706;--danger:#dc2626;
-      --chip:#eef2ff;--chip-text:#1e293b;--shadow:0 20px 40px rgba(0,0,0,.08);
+      --bg:#f6f8fc;--grad:linear-gradient(180deg,#f6f8ff 0%,#ffffff 100%);
+      --panel:#ffffffee;--card:#ffffff;--text:#0f172a;--muted:#5b6a80;--border:#e6ebf4;
+      --brand:#3b82f6;--brand2:#2563eb;--chip:#eef2ff;--chip-text:#1e293b;--shadow:0 18px 40px rgba(0,0,0,.08);
     }
+
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0;background:var(--bg);background-image:var(--grad);background-attachment:fixed;color:var(--text);font:15px/1.5 ui-sans-serif,system-ui,Segoe UI,Roboto}
+    body{
+      margin:0;color:var(--text);
+      background:var(--bg);background-image:var(--grad);background-attachment:fixed;
+      font:15px/1.5 ui-sans-serif,system-ui,Segoe UI,Roboto
+    }
     a{color:inherit;text-decoration:none}
 
-    .app{min-height:100vh;display:grid;grid-template-columns:260px 1fr}
-    @media(max-width:960px){.app{grid-template-columns:1fr}}
-
-    .sidebar{backdrop-filter:blur(8px);background:color-mix(in oklab, var(--panel) 88%, transparent);border-right:1px solid var(--border);padding:16px;position:sticky;top:0;height:100vh;overflow:auto}
-    @media(max-width:960px){.sidebar{position:static;height:auto;display:flex;align-items:center;gap:10px}
-      .sidebar nav{display:flex;gap:8px;overflow:auto}
-      .sidebar nav a{white-space:nowrap}
+    /* LAYOUT */
+    .app{min-height:100vh;display:grid;grid-template-columns:280px 1fr}
+    @media(max-width:980px){.app{grid-template-columns:1fr}}
+    .sidebar{
+      backdrop-filter:blur(10px);background:var(--panel);border-right:1px solid var(--border);
+      padding:16px;position:sticky;top:0;height:100vh;overflow:auto
+    }
+    @media(max-width:980px){
+      .sidebar{position:static;height:auto;padding:10px 16px}
     }
     .brand{display:flex;gap:10px;align-items:center;margin-bottom:12px}
-    .brand .dot{width:12px;height:12px;border-radius:999px;background:linear-gradient(135deg,var(--brand),#8b82f6)}
-    .brand b{font-size:18px}
-    nav a{display:block;padding:10px 12px;border-radius:12px;border:1px solid transparent}
+    .brand .logo{width:28px;height:28px;border-radius:10px;background:conic-gradient(from 210deg at 50% 50%, var(--brand), var(--brand2)); box-shadow:0 4px 18px color-mix(in oklab, var(--brand) 30%, transparent)}
+    .brand b{font-size:18px;letter-spacing:.3px}
+
+    nav{display:flex;flex-direction:column;gap:8px}
+    nav a{padding:10px 12px;border-radius:12px;border:1px solid transparent}
     nav a.active{background:var(--card);border-color:var(--border)}
-    nav a + a{margin-top:8px}
-    @media(max-width:960px){nav a + a{margin-top:0}}
+    @media(max-width:980px){
+      nav{flex-direction:row;overflow:auto}
+      nav a{white-space:nowrap}
+    }
 
     .main{padding:18px}
-    .topbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .topbar{
+      display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px
+    }
     .group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .btn{display:inline-flex;gap:8px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--panel);cursor:pointer}
-    .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+    .btn{
+      display:inline-flex;gap:8px;align-items:center;padding:10px 12px;border:1px solid var(--border);
+      border-radius:12px;background:var(--panel);cursor:pointer
+    }
+    .btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));border-color:transparent;color:#fff}
 
     /* HERO */
     .hero{display:grid;gap:12px;grid-template-columns:1fr; margin-bottom:14px}
-    @media(min-width:960px){.hero{grid-template-columns:2fr 1fr}}
-    .hero-card{background:color-mix(in oklab, var(--card) 86%, transparent);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px}
-    .hero h1{margin:0 0 6px 0;font-size:18px;font-weight:700}
-    .big{font-size:34px;font-weight:800;letter-spacing:0.2px}
+    @media(min-width:980px){.hero{grid-template-columns:2fr 1fr}}
+    .card{
+      background:color-mix(in oklab, var(--card) 86%, transparent);
+      border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px
+    }
+    .h1{margin:0 0 6px 0;font-size:16px;font-weight:700}
+    .big{font-size:clamp(26px,4.5vw,40px);font-weight:800;letter-spacing:.2px}
     .muted{color:var(--muted)}
     .tag{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);background:var(--card)}
 
-    /* CARDS KPI */
+    /* PERÍODO (segmented) */
+    .period{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+    .seg{display:inline-flex;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--panel)}
+    .seg button{
+      padding:8px 12px;border:0;background:transparent;color:var(--text);cursor:pointer
+    }
+    .seg button.active{background:color-mix(in oklab,var(--brand) 18%, transparent)}
+    .datebox{display:none;gap:6px;align-items:center}
+    .datebox input{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:8px 10px}
+
+    /* KPI GRID EXTRA */
     .cards{display:grid;grid-template-columns:1fr;gap:12px}
     @media(min-width:700px){.cards{grid-template-columns:repeat(3,1fr)}}
     .kpi{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:var(--shadow)}
@@ -67,10 +98,11 @@
     .rail-wrap{position:relative}
     .rail{display:flex;gap:12px;overflow:auto;padding:2px 1px 10px;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none}
     .rail::-webkit-scrollbar{display:none}
-    .card-reel{flex:0 0 72vw;max-width:300px;scroll-snap-align:center;background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
-    @media(min-width:900px){.card-reel{flex-basis:260px}}
+    .reel{flex:0 0 72vw;max-width:300px;scroll-snap-align:center;background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+    @media(min-width:900px){.reel{flex-basis:260px}}
     .frame{position:relative;width:100%;aspect-ratio:9/16;background:#0a0d14;overflow:hidden}
-    .thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+    .thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .2s}
+    .reel:hover .thumb{transform:scale(1.03)}
     .badge{position:absolute;left:8px;top:8px;background:#000a;color:#fff;padding:5px 8px;border-radius:999px;font:700 11px/1 system-ui;border:1px solid #ffffff22}
     .meta{padding:8px 10px}
     .row{display:flex;justify-content:space-between;gap:8px}
@@ -84,33 +116,52 @@
     /* GEOS */
     .geo{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:var(--shadow);margin-top:14px}
     .geo-list{display:grid;gap:10px}
-    .geo-item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+    .geo-item{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
     .flag{font-size:18px;margin-right:6px}
-    .bar{height:10px;border-radius:999px;background:color-mix(in oklab, var(--brand) 30%, transparent)}
-    .bar > i{display:block;height:10px;border-radius:999px;background:var(--brand)}
+    .bar{height:10px;border-radius:999px;background:color-mix(in oklab, var(--brand2) 25%, transparent)}
+    .bar > i{display:block;height:10px;border-radius:999px;background:linear-gradient(90deg,var(--brand),var(--brand2))}
     .geo-right{display:flex;gap:8px;align-items:center}
     .pill{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);background:var(--panel)}
 
-    /* MISC */
-    .topbar .btn{border-radius:12px}
+    /* SKELETONS */
+    .skel{background:linear-gradient(90deg,#10182c,#0f1627,#10182c);background-size:300% 100%;animation:sh 1.2s infinite;border-radius:14px}
+    @keyframes sh{0%{background-position:0 0}100%{background-position:200% 0}}
+    .skel-rail{display:flex;gap:12px}
+    .skel-card{flex:0 0 72vw;max-width:300px;height:260px;border-radius:16px}
+    @media(min-width:900px){.skel-card{flex-basis:260px}}
+
+    /* TOAST */
+    .toast{position:fixed;left:50%;translate:-50% 0;bottom:18px;background:#0b1222dd;color:#fff;padding:10px 14px;border-radius:12px;border:1px solid #22304d;backdrop-filter:blur(6px);display:none;z-index:10}
   </style>
 </head>
 <body>
   <div class="app">
+    <!-- SIDEBAR -->
     <aside class="sidebar">
-      <div class="brand"><span class="dot"></span><b>RastroO</b></div>
+      <div class="brand"><div class="logo"></div><b>RastroO</b></div>
       <nav id="nav">
         <a href="#/dashboard" class="active">Dashboard</a>
-        <a href="#/reels">Reels & Insights</a>
         <a href="#/connect">Conectar Instagram</a>
-        <a href="#/config">Configurações</a>
+        <a href="#/config">Tema</a>
       </nav>
     </aside>
 
+    <!-- MAIN -->
     <main class="main">
       <div class="topbar">
-        <div class="group">
+        <div class="group period">
           <span class="tag" id="igTag">IG: verificando…</span>
+          <div class="seg" id="seg">
+            <button data-p="0"  class="active">Hoje</button>
+            <button data-p="7">7D</button>
+            <button data-p="15">15D</button>
+            <button data-p="30">30D</button>
+            <button data-p="custom">Personalizado</button>
+          </div>
+          <div class="datebox" id="datebox">
+            <input id="d1" type="date"><span class="muted">→</span><input id="d2" type="date">
+            <button class="btn" id="apply">Aplicar</button>
+          </div>
         </div>
         <div class="group">
           <button class="btn" id="themeBtn">🌙/☀️ Tema</button>
@@ -118,44 +169,50 @@
         </div>
       </div>
 
+      <!-- HERO -->
       <section class="hero">
-        <div class="hero-card">
-          <h1>Faturamento do dia</h1>
-          <div class="big" id="fatHoje">—</div>
-          <div class="muted" id="vendasHoje">—</div>
+        <div class="card">
+          <p class="h1">Faturamento do período</p>
+          <div class="big" id="fatTxt" aria-live="polite">—</div>
+          <div class="muted" id="vendTxt">—</div>
         </div>
-        <div class="hero-card">
-          <h1>Status</h1>
-          <div class="big" id="srvStatus">—</div>
-          <div class="muted" id="userIg">—</div>
+        <div class="card">
+          <p class="h1">Status</p>
+          <div class="big" id="srvTxt">—</div>
+          <div class="muted" id="userTxt">—</div>
         </div>
       </section>
 
-      <section class="cards" id="cardsTop">
-        <!-- KPIs extras se quiser -->
-      </section>
+      <!-- KPIs extras (vazio por enquanto) -->
+      <section class="cards" id="cardsTop"></section>
 
+      <!-- REELS -->
       <section class="block">
-        <h3>Reels do dia (ranking por vendas)</h3>
+        <h3>Reels do período (ranking por vendas)</h3>
         <div class="rail-wrap">
           <button class="nav prev" aria-label="Anterior">◀</button>
-          <div class="rail" id="rail"></div>
+          <div class="rail" id="rail">
+            <div class="skel-rail" id="skel">
+              <div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div>
+            </div>
+          </div>
           <button class="nav next" aria-label="Próximo">▶</button>
         </div>
-        <div id="reelsEmpty" class="muted" style="padding:10px 2px;display:none">Sem Reels/vendas para hoje.</div>
+        <div id="reelsEmpty" class="muted" style="padding:10px 2px;display:none">Sem Reels/vendas neste período.</div>
       </section>
 
-      <section class="geo" id="geoBox">
-        <h3 style="margin:0 0 10px 0">Geos (hoje)</h3>
-        <div class="geo-list" id="geoList">
-          <div class="muted">Carregando geos…</div>
-        </div>
+      <!-- GEOS -->
+      <section class="geo">
+        <h3 style="margin:0 0 10px 0">Geos do período</h3>
+        <div class="geo-list" id="geoList"><div class="muted">Carregando geos…</div></div>
       </section>
     </main>
   </div>
 
+  <div class="toast" id="toast">Atualizado</div>
+
   <script>
-    // THEME
+    // ===== THEME =====
     const THEME_KEY='rastroo_theme';
     const htmlEl=document.documentElement;
     function setTheme(t){ htmlEl.setAttribute('data-theme', t); localStorage.setItem(THEME_KEY,t); }
@@ -163,110 +220,115 @@
     function toggleTheme(){ setTheme(htmlEl.getAttribute('data-theme')==='dark'?'light':'dark'); }
     document.getElementById('themeBtn').onclick = toggleTheme; initTheme();
 
-    // NAV
+    // ===== NAV =====
     const nav = document.getElementById('nav');
     function setActive(hash){[...nav.querySelectorAll('a')].forEach(a=>a.classList.toggle('active',a.getAttribute('href')===hash));}
 
-    // Helpers
+    // ===== HELPERS =====
     const BRL = new Intl.NumberFormat('pt-BR',{ style:'currency', currency:'BRL' });
-    const RN = new Intl.DisplayNames(['pt-BR'], { type: 'region' });
-    function startOfTodayMs(){ const n=new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()).getTime(); }
-    function num(x){ return (x ?? 0).toLocaleString('pt-BR'); }
+    const RN  = new Intl.DisplayNames(['pt-BR'], { type: 'region' });
     function flag(cc){ if(!cc||cc==='??') return '🏳️'; cc=cc.toUpperCase(); return [...cc].map(c=>String.fromCodePoint(127397 + c.charCodeAt())).join(''); }
+    function num(x){ return (x ?? 0).toLocaleString('pt-BR'); }
+    function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg||'Feito'; t.style.display='block'; setTimeout(()=>t.style.display='none',1600); }
 
-    // UI els
+    // Períodos
+    function startOfDay(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); }
+    function addDays(ms, n){ return ms + n*24*60*60*1000; }
+
+    let PERIOD = { type:'preset', days:0, since:0, until:0 }; // 0 = hoje
+    function resolvePeriod(){
+      const now = new Date();
+      if (PERIOD.type==='preset'){
+        const since = PERIOD.days===0 ? startOfDay(now) : addDays(startOfDay(now), -PERIOD.days+1);
+        PERIOD.since = since;
+        PERIOD.until = Date.now()+1;
+      }
+      // se custom, since/until já estão setados
+    }
+
+    // ===== ELEMENTOS =====
     const igTag = document.getElementById('igTag');
     const connectBtn = document.getElementById('connectBtn');
-    const fatHojeEl = document.getElementById('fatHoje');
-    const vendasHojeEl = document.getElementById('vendasHoje');
-    const srvStatusEl = document.getElementById('srvStatus');
-    const userIgEl = document.getElementById('userIg');
+    const fatTxt = document.getElementById('fatTxt');
+    const vendTxt = document.getElementById('vendTxt');
+    const srvTxt = document.getElementById('srvTxt');
+    const userTxt = document.getElementById('userTxt');
     const rail = document.getElementById('rail');
-
+    const reelsEmpty = document.getElementById('reelsEmpty');
+    const skel = document.getElementById('skel');
     document.querySelector('.nav.prev').onclick = () => rail.scrollBy({left: -window.innerWidth*0.7, behavior:'smooth'});
     document.querySelector('.nav.next').onclick = () => rail.scrollBy({left:  window.innerWidth*0.7, behavior:'smooth'});
-
     connectBtn.onclick = ()=> location.href='/auth/ig/login';
 
+    // Period segmented
+    const seg = document.getElementById('seg');
+    const datebox = document.getElementById('datebox');
+    const d1 = document.getElementById('d1');
+    const d2 = document.getElementById('d2');
+    const apply = document.getElementById('apply');
+
+    seg.addEventListener('click', (e)=>{
+      if(e.target.tagName!=='BUTTON') return;
+      [...seg.children].forEach(b=>b.classList.remove('active'));
+      e.target.classList.add('active');
+      const p = e.target.getAttribute('data-p');
+      if (p==='custom'){
+        datebox.style.display='flex';
+        // default: hoje
+        const today = new Date();
+        const iso = (d)=>d.toISOString().slice(0,10);
+        d1.value = iso(today);
+        d2.value = iso(today);
+        PERIOD = { type:'custom', since:startOfDay(today), until:addDays(startOfDay(today),1) };
+      } else {
+        datebox.style.display='none';
+        PERIOD = { type:'preset', days:parseInt(p,10)||0, since:0, until:0 };
+        resolvePeriod(); refreshAll();
+      }
+    });
+    apply.onclick = ()=>{
+      const s = new Date(d1.value+'T00:00:00'); const u = new Date(d2.value+'T00:00:00');
+      if (isNaN(+s) || isNaN(+u)) return toast('Datas inválidas');
+      const since = startOfDay(s); const until = addDays(startOfDay(u), 1);
+      PERIOD = { type:'custom', since, until };
+      refreshAll(); toast('Período aplicado');
+    };
+
+    // ===== DATA LOADERS =====
     async function authStatus(){
       try{
         const s = await fetch('/api/auth/status').then(r=>r.json());
-        igTag.textContent = s.connected ? `IG: conectado @${s.username||''}` : 'IG: não conectado';
+        igTag.textContent = s.connected ? `IG: @${s.username||''}` : 'IG: não conectado';
         igTag.className = 'tag ' + (s.connected ? '' : 'muted');
         connectBtn.style.display = s.connected ? 'none' : 'inline-flex';
-        userIgEl.textContent = s.connected ? '@'+(s.username||'') : 'Conecte sua conta';
+        userTxt.textContent = s.connected ? '@'+(s.username||'') : 'Conecte sua conta';
         return s;
-      }catch{
-        igTag.textContent='IG: erro'; igTag.className='tag muted'; connectBtn.style.display='inline-flex';
-        return { connected:false };
-      }
+      }catch{ igTag.textContent='IG: erro'; igTag.className='tag muted'; connectBtn.style.display='inline-flex'; return {connected:false}; }
     }
-
-    async function loadHero(){
+    async function loadPing(){
       try{
         const p = await fetch('/api/ping').then(r=>r.json());
-        srvStatusEl.textContent = p.ok ? 'Online' : 'Offline';
-      }catch{ srvStatusEl.textContent='Offline'; }
-
-      const since = startOfTodayMs(), until = Date.now();
-      const sales = await fetch(`/api/sales/by-reel?since=${since}&until=${until}`).then(r=>r.json()).catch(()=>({ok:false}));
-      fatHojeEl.textContent = BRL.format(sales.total_revenue || 0);
-      vendasHojeEl.textContent = `${num(sales.total_sales || 0)} vendas`;
+        srvTxt.textContent = p.ok ? 'Online' : 'Offline';
+      }catch{ srvTxt.textContent='Offline'; }
     }
-
+    async function loadSales(){
+      const url = `/api/sales/by-reel?since=${PERIOD.since}&until=${PERIOD.until}`;
+      return fetch(url).then(r=>r.json()).catch(()=>({ok:false}));
+    }
     async function loadReels(){
-      const sales = await fetch(`/api/sales/by-reel?since=${startOfTodayMs()}&until=${Date.now()}`).then(r=>r.json()).catch(()=>({ok:false}));
-      const reels = await fetch('/api/ig/reels').then(r=>r.json()).catch(()=>({ok:false}));
-
-      if (!reels.ok || !reels.items?.length){
-        document.getElementById('reelsEmpty').style.display='block';
-        rail.innerHTML = '';
-        return;
-      }
-
-      const byReel = sales.by_reel || {};
-      const scored = reels.items.map(m=>{
-        const hitId = byReel[m.id];
-        const hitLink = byReel[m.permalink];
-        const s = (hitId?.sales || hitLink?.sales || 0);
-        const r$ = (hitId?.revenue || hitLink?.revenue || 0);
-        return { m, sales: s, revenue: r$ };
-      }).sort((a,b)=> b.sales - a.sales || b.revenue - a.revenue);
-
-      if (!scored.length){ document.getElementById('reelsEmpty').style.display='block'; rail.innerHTML=''; return; }
-
-      rail.innerHTML = scored.map((it,idx)=>{
-        const m = it.m;
-        const thumb = m.thumbnail_url || m.media_url || '';
-        const top = it.sales>0 && idx===0;
-        const badge = top ? `<span class="badge" style="background:#063;border-color:#0a4">+ vendido</span>` : `<span class="badge">Reel</span>`;
-        return `
-          <a class="card-reel" href="${m.permalink}" target="_blank" rel="noopener">
-            <div class="frame">
-              <img class="thumb" loading="lazy" referrerpolicy="no-referrer" src="${thumb}" alt="Reel"/>
-              ${badge}
-            </div>
-            <div class="meta">
-              <div class="row">
-                <span class="chip">Vendas: <b>${num(it.sales)}</b></span>
-                <span class="chip money">${BRL.format(it.revenue || 0)}</span>
-              </div>
-            </div>
-          </a>
-        `;
-      }).join('');
-      document.getElementById('reelsEmpty').style.display='none';
+      return fetch('/api/ig/reels').then(r=>r.json()).catch(()=>({ok:false}));
+    }
+    async function loadGeos(){
+      const url = `/api/geo/summary?since=${PERIOD.since}&until=${PERIOD.until}`;
+      return fetch(url).then(r=>r.json()).catch(()=>({ok:false}));
     }
 
-    async function loadGeos(){
-      const since = startOfTodayMs(), until = Date.now();
-      const j = await fetch(`/api/geo/summary?since=${since}&until=${until}`).then(r=>r.json()).catch(()=>({ok:false}));
+    function renderGeos(js){
       const box = document.getElementById('geoList');
-      if (!j.ok){ box.innerHTML = `<div class="muted">Erro ao carregar geos.</div>`; return; }
-      if (!j.countries?.length){ box.innerHTML = `<div class="muted">Sem geos para hoje.</div>`; return; }
-
-      const total = Math.max(1, j.total_leads + j.total_sales);
-      const top = j.countries.slice(0, 6);
+      if (!js.ok){ box.innerHTML = `<div class="muted">Erro ao carregar geos.</div>`; return; }
+      if (!js.countries?.length){ box.innerHTML = `<div class="muted">Sem geos neste período.</div>`; return; }
+      const total = Math.max(1, js.total_leads + js.total_sales);
+      const top = js.countries.slice(0, 6);
       box.innerHTML = top.map(c=>{
         const totalC = c.leads + c.sales;
         const pct = Math.round((totalC/total)*100);
@@ -286,44 +348,78 @@
       }).join('');
     }
 
-    async function pageDashboard(){
-      setActive('#/dashboard');
-      await authStatus();
-      await loadHero();
-      await loadReels();
-      await loadGeos();
-    }
-    async function pageReels(){
-      setActive('#/reels');
-      document.querySelector('.hero').style.display='none';
-      document.getElementById('geoBox').style.display='none';
-      document.getElementById('cardsTop').style.display='none';
-      // direciona para carrossel do dashboard (ficou melhor integrado)
-      location.hash = '#/dashboard';
-    }
-    async function pageConnect(){
-      setActive('#/connect');
-      const s = await authStatus();
-      alert(s.connected ? 'Conta já conectada.' : 'Clique em "Conectar Instagram".');
-      if (!s.connected) connectBtn.focus();
-      location.hash = '#/dashboard';
-    }
-    async function pageConfig(){
-      setActive('#/config');
-      toggleTheme();
-      location.hash = '#/dashboard';
+    function renderReels(reels, sales){
+      skel.style.display='none';
+      if (!reels.ok || !reels.items?.length){ reelsEmpty.style.display='block'; rail.innerHTML=''; return; }
+      const byReel = sales.by_reel || {};
+      const scored = reels.items.map(m=>{
+        const idHit  = byReel[m.id];
+        const urlHit = byReel[m.permalink];
+        const s = (idHit?.sales || urlHit?.sales || 0);
+        const r$ = (idHit?.revenue || urlHit?.revenue || 0);
+        return { m, sales:s, revenue:r$ };
+      }).sort((a,b)=> b.sales - a.sales || b.revenue - a.revenue
+          || (b.m.video_play_count||0) - (a.m.video_play_count||0));
+
+      if (!scored.length){ reelsEmpty.style.display='block'; rail.innerHTML=''; return; }
+      reelsEmpty.style.display='none';
+
+      rail.innerHTML = scored.map((it,idx)=>{
+        const m = it.m;
+        const thumb = m.thumbnail_url || m.media_url || '';
+        const top = it.sales>0 && idx===0;
+        const badge = top ? `<span class="badge" style="background:#063;border-color:#0a4">+ vendido</span>` : `<span class="badge">Reel</span>`;
+        return `
+          <a class="reel" href="${m.permalink}" target="_blank" rel="noopener">
+            <div class="frame">
+              <img class="thumb" loading="lazy" referrerpolicy="no-referrer" src="${thumb}" alt="Reel"/>
+              ${badge}
+            </div>
+            <div class="meta">
+              <div class="row">
+                <span class="chip">Vendas: <b>${num(it.sales)}</b></span>
+                <span class="chip money">${BRL.format(it.revenue || 0)}</span>
+              </div>
+            </div>
+          </a>
+        `;
+      }).join('');
     }
 
+    async function refreshAll(){
+      // status/ping
+      await Promise.all([authStatus(), loadPing()]);
+
+      // faturamento & vendas
+      const sales = await loadSales();
+      fatTxt.textContent  = BRL.format(sales.total_revenue || 0);
+      vendTxt.textContent = `${num(sales.total_sales || 0)} vendas`;
+
+      // reels
+      skel.style.display='block';
+      const reels = await loadReels();
+      renderReels(reels, sales);
+
+      // geos
+      const geos = await loadGeos();
+      renderGeos(geos);
+    }
+
+    // ===== ROUTER (simples) =====
     async function router(){
       const h = (location.hash || '#/dashboard');
-      if (h.startsWith('#/reels')) return pageReels();
-      if (h.startsWith('#/connect')) return pageConnect();
-      if (h.startsWith('#/config')) return pageConfig();
-      document.querySelector('.hero').style.display='';
-      document.getElementById('geoBox').style.display='';
-      document.getElementById('cardsTop').style.display='';
-      return pageDashboard();
+      setActive(h);
+      if (h.startsWith('#/connect')){
+        const s = await authStatus();
+        if (!s.connected) connectBtn.click(); else location.hash='#/dashboard';
+        return;
+      }
+      if (h.startsWith('#/config')){ toggleTheme(); location.hash='#/dashboard'; return; }
+      // dashboard
+      resolvePeriod(); refreshAll();
     }
+
+    // INIT
     window.addEventListener('hashchange', router);
     document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) router(); });
     router();
