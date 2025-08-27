@@ -1,5 +1,4 @@
-// server.js — RastroO (CommonJS) com IG + agregador + GEO por IP
-
+// server.js — RastroO (CommonJS) IG + Sales + GEO + Debug
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
@@ -8,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const geoip = require("geoip-lite");
 
-// fetch (Node 18 tem global; Node 16 usa node-fetch dinamicamente)
+// fetch compat (Node >=18 tem global)
 let _fetch = global.fetch;
 if (!_fetch) {
   _fetch = (...args) => import("node-fetch").then(({ default: f }) => f(...args));
@@ -21,7 +20,7 @@ app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
-// NUNCA cachear HTML
+// evita cache de HTML
 app.use((req, res, next) => {
   if (req.path.endsWith(".html") || req.path === "/") {
     res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
@@ -36,14 +35,14 @@ app.use((req, res, next) => {
 const PUBLIC_DIR = path.join(__dirname, "public");
 app.use("/public", express.static(PUBLIC_DIR, { maxAge: "0", etag: true, lastModified: true }));
 
-// ====== ENVs ======
+// ===== ENVs =====
 const IG_APP_ID = process.env.IG_APP_ID || "";
 const IG_APP_SECRET = process.env.IG_APP_SECRET || "";
 const IG_REDIRECT = process.env.IG_REDIRECT || ""; // ex.: https://trk.rastroo.site/auth/ig/callback
 const IG_VERIFY_TOKEN = process.env.IG_VERIFY_TOKEN || "RASTROO_VERIFY";
 const FB_VER = "v20.0";
 
-// ====== STORE (DISK_PATH) ======
+// ===== STORE em disco =====
 const DISK_PATH = process.env.DISK_PATH || path.join(__dirname, "data", "rastroo-store.json");
 (function ensureStoreFile() {
   try {
@@ -51,92 +50,139 @@ const DISK_PATH = process.env.DISK_PATH || path.join(__dirname, "data", "rastroo
     if (!fs.existsSync(DISK_PATH)) {
       fs.writeFileSync(
         DISK_PATH,
-        JSON.stringify({ connection: null, events: [] }, null, 2),
+        JSON.stringify({ connection: null, events: [], tmp_token: null }, null, 2),
         "utf8"
       );
     } else {
       const cur = JSON.parse(fs.readFileSync(DISK_PATH, "utf8") || "{}");
-      if (!cur.events) { cur.events = []; fs.writeFileSync(DISK_PATH, JSON.stringify(cur, null, 2), "utf8"); }
+      if (!("events" in cur)) cur.events = [];
+      if (!("tmp_token" in cur)) cur.tmp_token = null;
+      fs.writeFileSync(DISK_PATH, JSON.stringify(cur, null, 2), "utf8");
     }
   } catch (e) { console.error("STORE_INIT_ERR", e); }
 })();
-function readStore() { try { return JSON.parse(fs.readFileSync(DISK_PATH, "utf8")); } catch { return { connection: null, events: [] }; } }
+function readStore() { try { return JSON.parse(fs.readFileSync(DISK_PATH, "utf8")); } catch { return { connection: null, events: [], tmp_token: null }; } }
 function writeStore(obj) { try { fs.writeFileSync(DISK_PATH, JSON.stringify(obj, null, 2), "utf8"); } catch (e) { console.error("STORE_SAVE_ERR", e); } }
 let store = readStore();
 
-// ====== HELPERS ======
+// ===== HELPERS =====
 function rndState() { return crypto.randomBytes(16).toString("hex"); }
 function clientIp(req) {
   const xf = (req.headers["x-forwarded-for"] || "").toString().split(",")[0].trim();
   return xf || req.socket?.remoteAddress || "";
 }
-function requireConnected(req, res, next) {
-  const c = readStore().connection;
-  if (!c || !c.igid || !c.ig_token) return res.json({ ok: false, error: "not_connected" });
-  next();
-}
 
-// ====== HEALTH ======
+// ===== HEALTH =====
 app.get("/api/ping", (_req, res) => res.json({ ok: true, ts: Date.now() }));
 
-// ====== AUTH STATUS ======
+// ===== AUTH STATUS =====
 app.get("/api/auth/status", (_req, res) => {
   const c = readStore().connection;
   if (!c) return res.json({ ok: true, connected: false });
-  res.json({ ok: true, connected: !!(c.igid && c.ig_token), username: c.username || "", igid: c.igid || "", page_id: c.page_id || "" });
+  res.json({
+    ok: true,
+    connected: !!(c.igid && c.ig_token),
+    username: c.username || "",
+    igid: c.igid || "",
+    page_id: c.page_id || ""
+  });
 });
 
-// ====== OAuth start ======
-const AUTH_SCOPES = [ "instagram_basic", "instagram_manage_insights", "pages_show_list" ].join(",");
+// ===== OAuth start =====
+const AUTH_SCOPES = ["instagram_basic", "instagram_manage_insights", "pages_show_list"].join(",");
 app.get("/auth/ig/login", (req, res) => {
   try {
     if (!IG_APP_ID || !IG_APP_SECRET || !IG_REDIRECT) {
       return res.status(500).send("Config faltando: IG_APP_ID / IG_APP_SECRET / IG_REDIRECT.");
     }
     const state = rndState();
-    res.cookie("rst_oauth_state", state, { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 10 * 60 * 1000 });
-    const params = new URLSearchParams({ client_id: IG_APP_ID, redirect_uri: IG_REDIRECT, response_type: "code", scope: AUTH_SCOPES, state }).toString();
+    // cookie com domínio .rastroo.site para não perder entre subdomínios
+    res.cookie("rst_oauth_state", state, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      domain: ".rastroo.site",
+      path: "/",
+      maxAge: 10 * 60 * 1000
+    });
+
+    const params = new URLSearchParams({
+      client_id: IG_APP_ID,
+      redirect_uri: IG_REDIRECT,
+      response_type: "code",
+      scope: AUTH_SCOPES,
+      state
+    }).toString();
     res.redirect(`https://www.facebook.com/${FB_VER}/dialog/oauth?${params}`);
-  } catch (e) { console.error("AUTH_START_ERR", e); res.status(500).send("OAuth init error"); }
+  } catch (e) {
+    console.error("AUTH_START_ERR", e);
+    res.status(500).send("OAuth init error");
+  }
 });
 
-// ====== OAuth callback ======
+// ===== OAuth callback =====
 app.get("/auth/ig/callback", async (req, res) => {
   try {
     const { code, state, error, error_description } = req.query;
-    if (error) return res.redirect(`/public/app.html#/connect?error=${encodeURIComponent(error_description || error)}`);
-
+    if (error) {
+      return res.redirect(`/public/app.html#/connect?error=${encodeURIComponent(error_description || error)}`);
+    }
     const stateCookie = req.cookies ? req.cookies["rst_oauth_state"] : null;
     if (!code || !state || !stateCookie || stateCookie !== state) {
       return res.redirect(`/public/app.html#/connect?error=${encodeURIComponent("codigo_ou_state_ausente")}`);
     }
-    res.clearCookie("rst_oauth_state", { path: "/" });
+    res.clearCookie("rst_oauth_state", { path: "/", domain: ".rastroo.site" });
 
     // troca code -> token curto
-    const p = new URLSearchParams({ client_id: IG_APP_ID, client_secret: IG_APP_SECRET, redirect_uri: IG_REDIRECT, code }).toString();
-    const tokUrl = `https://graph.facebook.com/${FB_VER}/oauth/access_token?${p}`;
-    const jTok = await (await fetch(tokUrl)).json();
-    if (!jTok.access_token) return res.redirect(`/public/app.html#/connect?error=token_exchange`);
+    const p = new URLSearchParams({
+      client_id: IG_APP_ID,
+      client_secret: IG_APP_SECRET,
+      redirect_uri: IG_REDIRECT,
+      code
+    }).toString();
+    const jTok = await (await fetch(`https://graph.facebook.com/${FB_VER}/oauth/access_token?${p}`)).json();
+    if (!jTok.access_token) {
+      return res.redirect(`/public/app.html#/connect?error=token_exchange`);
+    }
     let accessToken = jTok.access_token;
 
     // tenta long-lived
-    const longUrl = `https://graph.facebook.com/${FB_VER}/oauth/access_token?grant_type=fb_exchange_token&client_id=${encodeURIComponent(IG_APP_ID)}&client_secret=${encodeURIComponent(IG_APP_SECRET)}&fb_exchange_token=${encodeURIComponent(accessToken)}`;
-    const jLong = await (await fetch(longUrl)).json();
+    const jLong = await (await fetch(
+      `https://graph.facebook.com/${FB_VER}/oauth/access_token` +
+      `?grant_type=fb_exchange_token` +
+      `&client_id=${encodeURIComponent(IG_APP_ID)}` +
+      `&client_secret=${encodeURIComponent(IG_APP_SECRET)}` +
+      `&fb_exchange_token=${encodeURIComponent(accessToken)}`
+    )).json();
     if (jLong.access_token) accessToken = jLong.access_token;
 
-    // pega página com IG conectado
-    const jPages = await (await fetch(`https://graph.facebook.com/${FB_VER}/me/accounts?access_token=${encodeURIComponent(accessToken)}`)).json();
+    // salva token temporário p/ debug mesmo se falhar o link com IG
+    store = readStore();
+    store.tmp_token = accessToken;
+    writeStore(store);
+
+    // pega páginas e procura IG conectado
+    const pages = await (await fetch(
+      `https://graph.facebook.com/${FB_VER}/me/accounts?access_token=${encodeURIComponent(accessToken)}`
+    )).json();
+
     let found = null;
-    if (Array.isArray(jPages.data)) {
-      for (const pg of jPages.data) {
+    if (Array.isArray(pages.data)) {
+      for (const pg of pages.data) {
         const info = await (await fetch(
-          `https://graph.facebook.com/${FB_VER}/${pg.id}?fields=instagram_business_account{id,username},connected_instagram_account{id,username}&access_token=${encodeURIComponent(accessToken)}`
+          `https://graph.facebook.com/${FB_VER}/${pg.id}` +
+          `?fields=instagram_business_account{id,username},connected_instagram_account{id,username}` +
+          `&access_token=${encodeURIComponent(accessToken)}`
         )).json();
+
         let igid = info?.instagram_business_account?.id || info?.connected_instagram_account?.id || null;
         let iguser = info?.instagram_business_account?.username || info?.connected_instagram_account?.username || "";
+
         if (igid) {
           if (!iguser) {
-            const jU = await (await fetch(`https://graph.facebook.com/${FB_VER}/${igid}?fields=username&access_token=${encodeURIComponent(accessToken)}`)).json();
+            const jU = await (await fetch(
+              `https://graph.facebook.com/${FB_VER}/${igid}?fields=username&access_token=${encodeURIComponent(accessToken)}`
+            )).json();
             iguser = jU.username || "";
           }
           found = { page_id: pg.id, igid, username: iguser };
@@ -144,53 +190,70 @@ app.get("/auth/ig/callback", async (req, res) => {
         }
       }
     }
-    if (!found) return res.redirect(`/public/app.html#/connect?error=no_ig_business_linked`);
 
+    if (!found) {
+      // permanece com tmp_token p/ debug
+      return res.redirect(`/public/app.html#/connect?error=no_ig_business_linked`);
+    }
+
+    // conexão OK
     store = readStore();
-    store.connection = { page_id: found.page_id, igid: found.igid, username: found.username, ig_token: accessToken, connected_at: Date.now() };
+    store.connection = {
+      page_id: found.page_id,
+      igid: found.igid,
+      username: found.username,
+      ig_token: accessToken,
+      connected_at: Date.now()
+    };
+    store.tmp_token = null; // limpamos o temporário
     writeStore(store);
 
     res.redirect("/public/app.html#/dashboard");
-  } catch (e) { console.error("AUTH_CB_ERR", e); res.redirect(`/public/app.html#/connect?error=callback_exception`); }
+  } catch (e) {
+    console.error("AUTH_CB_ERR", e);
+    res.redirect(`/public/app.html#/connect?error=callback_exception`);
+  }
 });
 
-// ====== IG: listar mídia (reels tolerante) ======
+// ===== IG: listar Reels =====
 app.get("/api/ig/reels", async (req, res) => {
   try {
     const c = readStore().connection;
     if (!c || !c.igid || !c.ig_token) return res.json({ ok: false, error: "not_connected" });
 
     const FIELDS = [
-      "id","caption","media_type","media_product_type","thumbnail_url","media_url","permalink",
-      "comments_count","like_count","video_play_count","timestamp"
+      "id","caption","media_type","media_product_type","thumbnail_url","media_url",
+      "permalink","comments_count","like_count","video_play_count","timestamp"
     ].join(",");
-
     const limit = Math.min(100, parseInt(req.query.limit || "100", 10));
-    const url = `https://graph.facebook.com/${FB_VER}/${c.igid}/media?fields=${encodeURIComponent(FIELDS)}&limit=${limit}&access_token=${encodeURIComponent(c.ig_token)}`;
-    const js = await (await fetch(url)).json();
+    const js = await (await fetch(
+      `https://graph.facebook.com/${FB_VER}/${c.igid}/media` +
+      `?fields=${encodeURIComponent(FIELDS)}&limit=${limit}&access_token=${encodeURIComponent(c.ig_token)}`
+    )).json();
     if (js.error) {
-      if (js.error.code === 190) { store = readStore(); store.connection = null; writeStore(store); return res.json({ ok:false, error:"not_connected" }); }
-      return res.json({ ok:false, error:"fb_error", raw:js });
+      if (js.error.code === 190) { // token inválido/expirado
+        store = readStore(); store.connection = null; writeStore(store);
+        return res.json({ ok:false, error:"not_connected" });
+      }
+      return res.json({ ok:false, error:"fb_error", raw:js.error });
     }
-
     const data = Array.isArray(js.data) ? js.data : [];
     const items = data.filter(m => m.media_product_type === "REELS" || ((m.permalink||"").includes("/reel/")));
     res.json({ ok:true, count: items.length, items });
   } catch (e) { console.error("IG_REELS_ERR", e); res.json({ ok:false, error:"server_error" }); }
 });
 
-// ====== TRACK: registrar eventos (sale/lead) + GEO ======
+// ===== TRACK: lead/sale + GEO por IP =====
 app.post("/api/track", (req, res) => {
   try {
     const { type, reel_id, permalink, amount, username, meta, country, city } = req.body || {};
     if (!type) return res.status(400).json({ ok:false, error:"type_required" });
     if (!["sale","lead"].includes(type)) return res.status(400).json({ ok:false, error:"type_invalid" });
 
-    // Geo por IP (fallback se não vier country/city no body)
     const ip = clientIp(req);
-    let geo = geoip.lookup(ip) || null;
-    const cc = (country || geo?.country || "").toUpperCase() || null;
-    const cty = city || geo?.city || null;
+    const g = geoip.lookup(ip) || null;
+    const cc = (country || g?.country || "").toUpperCase() || null;
+    const cty = city || g?.city || null;
 
     store = readStore();
     store.events = store.events || [];
@@ -209,7 +272,7 @@ app.post("/api/track", (req, res) => {
   } catch (e) { console.error("TRACK_ERR", e); res.status(500).json({ ok:false, error:"server_error" }); }
 });
 
-// ====== SALES: agregado por Reel ======
+// ===== SALES: agregado por Reel =====
 app.get("/api/sales/by-reel", (req, res) => {
   try {
     const since = Number(req.query.since || 0);
@@ -225,12 +288,14 @@ app.get("/api/sales/by-reel", (req, res) => {
       if (e.ts > byKey[key].last_ts) byKey[key].last_ts = e.ts;
       totalSales += 1; totalRevenue += Number(e.amount || 0);
     }
-    const ranking = Object.entries(byKey).map(([k,v]) => ({ key:k, ...v })).sort((a,b)=> b.sales - a.sales || b.revenue - a.revenue);
+    const ranking = Object.entries(byKey).map(([k,v]) => ({ key:k, ...v }))
+      .sort((a,b)=> b.sales - a.sales || b.revenue - a.revenue);
+
     res.json({ ok:true, since, until, total_sales:totalSales, total_revenue:totalRevenue, by_reel:byKey, ranking });
   } catch (e) { console.error("BY_REEL_ERR", e); res.status(500).json({ ok:false, error:"server_error" }); }
 });
 
-// ====== GEO: resumo por país/cidade ======
+// ===== GEO: resumo por país/cidade =====
 app.get("/api/geo/summary", (req,res)=>{
   try{
     const since = Number(req.query.since || 0);
@@ -259,15 +324,50 @@ app.get("/api/geo/summary", (req,res)=>{
   }catch(e){ console.error("GEO_SUMMARY_ERR",e); res.status(500).json({ ok:false, error:"server_error" }); }
 });
 
-// DEBUG cru
-app.get("/api/debug/ig/media", async (req, res) => {
+// ===== DEBUG: páginas/IG visíveis com token (usa connection.ig_token ou tmp_token) =====
+app.get("/api/debug/fb/pages", async (req, res) => {
   try {
-    const c = readStore().connection;
-    if (!c || !c.igid || !c.ig_token) return res.json({ ok:false, error:"not_connected" });
-    const url = `https://graph.facebook.com/${FB_VER}/${c.igid}/media?fields=id,media_type,media_product_type,permalink,thumbnail_url,media_url,caption,timestamp&limit=25&access_token=${encodeURIComponent(c.ig_token)}`;
-    const js = await (await fetch(url)).json();
-    res.json(js);
+    const s = readStore();
+    const token = s.connection?.ig_token || s.tmp_token;
+    if (!token) return res.json({ ok:false, error:"no_token" });
+
+    const pages = await (await fetch(
+      `https://graph.facebook.com/${FB_VER}/me/accounts?access_token=${encodeURIComponent(token)}`
+    )).json();
+    const out = [];
+    for (const pg of (pages.data || [])) {
+      const info = await (await fetch(
+        `https://graph.facebook.com/${FB_VER}/${pg.id}` +
+        `?fields=name,instagram_business_account{id,username},connected_instagram_account{id,username}` +
+        `&access_token=${encodeURIComponent(token)}`
+      )).json();
+      out.push({
+        page: { id: pg.id, name: info.name },
+        ig: info.instagram_business_account || info.connected_instagram_account || null
+      });
+    }
+    res.json({ ok:true, pages: out });
   } catch (e) { res.json({ ok:false, error:String(e) }); }
+});
+
+// ===== DEBUG: reset auth (POST ou GET p/ facilitar) =====
+app.all("/api/debug/auth/reset", (req, res) => {
+  try {
+    store = readStore();
+    store.connection = null;
+    store.tmp_token = null;
+    writeStore(store);
+    res.json({ ok:true, reset:true });
+  } catch (e) { res.status(500).json({ ok:false, error:String(e) }); }
+});
+
+// VERIFICAÇÃO DE WEBHOOK (opcional)
+app.get("/ig/webhook", (req, res) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+  if (mode === "subscribe" && token === IG_VERIFY_TOKEN) return res.status(200).send(challenge);
+  return res.sendStatus(403);
 });
 
 // raiz
