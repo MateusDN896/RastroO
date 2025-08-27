@@ -1,68 +1,142 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-  <title>RastroO — App</title>
+  <title>RastroO — Dashboard</title>
+  <link rel="icon" href="/public/favicon.ico"/>
   <style>
+    /* ===== THEMING ===== */
     :root{
-      --bg:#0b1020;--panel:#111a2e;--card:#0f1627;--text:#e7eefc;--muted:#93a3b2;--brand:#3b82f6;
-      --border:#1f2940;--ok:#10b981;--warn:#f59e0b;--danger:#ef4444;
+      --bg:#0b1020;--panel:#10192c;--card:#0e1627;--text:#e6eefc;--muted:#98a5b8;
+      --border:#1f2940;--brand:#3b82f6;--ok:#10b981;--warn:#f59e0b;--danger:#ef4444;
+      --chip:#1a2236;--chip-text:#dbe4ff;--shadow:0 10px 30px rgba(0,0,0,.35);
     }
+    [data-theme="light"]{
+      --bg:#f5f7fb;--panel:#ffffff;--card:#ffffff;--text:#0d1321;--muted:#5b6a80;
+      --border:#e5e9f2;--brand:#2563eb;--ok:#059669;--warn:#d97706;--danger:#dc2626;
+      --chip:#eef2ff;--chip-text:#1e293b;--shadow:0 10px 24px rgba(0,0,0,.08);
+    }
+
+    /* ===== BASE ===== */
     *{box-sizing:border-box}
     html,body{height:100%}
     body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 ui-sans-serif,system-ui,Segoe UI,Roboto}
     a{color:inherit;text-decoration:none}
 
+    /* ===== LAYOUT ===== */
     .app{min-height:100vh;display:grid;grid-template-columns:240px 1fr}
     @media(max-width:900px){.app{grid-template-columns:1fr}}
 
-    .sidebar{background:var(--panel);border-right:1px solid var(--border);padding:16px;position:sticky;top:0;height:100vh;overflow:auto}
-    @media(max-width:900px){.sidebar{position:static;height:auto}}
-    .brand{display:flex;gap:10px;align-items:center;margin-bottom:16px}
+    .sidebar{
+      background:var(--panel);border-right:1px solid var(--border);padding:16px;
+      position:sticky;top:0;height:100vh;overflow:auto
+    }
+    @media(max-width:900px){
+      .sidebar{position:static;height:auto;display:flex;align-items:center;gap:10px}
+      .sidebar nav{display:flex;gap:8px;overflow:auto}
+      .sidebar nav a{white-space:nowrap}
+    }
+    .brand{display:flex;gap:10px;align-items:center;margin-bottom:12px}
     .brand .dot{width:10px;height:10px;border-radius:999px;background:linear-gradient(135deg,var(--brand),#8b82f6)}
     .brand b{font-size:18px}
 
-    nav a{display:block;padding:10px 12px;border-radius:8px;border:1px solid transparent}
+    nav a{display:block;padding:10px 12px;border-radius:10px;border:1px solid transparent}
     nav a.active{background:var(--card);border-color:var(--border)}
     nav a + a{margin-top:8px}
+    @media(max-width:900px){nav a + a{margin-top:0}}
 
     .main{padding:18px}
-    .header{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .topbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+    .btn{
+      display:inline-flex;gap:8px;align-items:center;padding:10px 12px;border:1px solid var(--border);
+      border-radius:10px;background:var(--panel);cursor:pointer
+    }
+    .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
     .tag{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);background:var(--card)}
-    .btn{display:inline-flex;gap:8px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel);cursor:pointer}
-
-    .cards{display:grid;grid-template-columns:1fr;gap:12px}
-    @media(min-width:520px){.cards{grid-template-columns:1fr 1fr}}
-    @media(min-width:980px){.cards{grid-template-columns:repeat(3,1fr)}}
-    .card{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card)}
-    .thumb{aspect-ratio:9/16;background-size:cover;background-position:center}
-    .meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px}
-    .row{display:flex;justify-content:space-between;font-size:12px}
     .muted{color:var(--muted)}
-    .mt{margin-top:10px}
+    .cards{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:700px){.cards{grid-template-columns:repeat(3,1fr)}}
+    .kpi{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+    .kpi h4{margin:0 0 8px 0;font-size:13px;color:var(--muted)}
+    .kpi b{font-size:22px}
 
-    .table{width:100%;border-collapse:collapse;border:1px solid var(--border);background:var(--panel)}
-    .table th,.table td{padding:10px;border-top:1px solid var(--border);text-align:left;font-size:13px}
+    /* ===== REELS CARROSSEL ===== */
+    .reels-head{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:8px 0 14px}
+    .reels-filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .input, select{
+      background:var(--panel);border:1px solid var(--border);color:var(--text);
+      padding:9px 12px;border-radius:10px;min-height:40px
+    }
+
+    .rail-wrap{position:relative}
+    .rail{
+      display:flex;gap:14px;overflow:auto;padding:4px 2px 12px;
+      scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;
+    }
+    .rail::-webkit-scrollbar{display:none}
+
+    .reel{
+      flex:0 0 88vw; max-width:360px;
+      scroll-snap-align:center;
+      background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    @media(min-width:820px){.reel{flex-basis:320px}}
+
+    .frame{position:relative;width:100%;aspect-ratio:9/16;background:#0a0d14;overflow:hidden}
+    .thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+    .badge{position:absolute;left:10px;top:10px;background:#0009;color:#fff;padding:6px 10px;border-radius:999px;font:600 12px/1 system-ui;border:1px solid #ffffff22}
+
+    .meta{padding:10px 12px}
+    .caption{font-weight:600;margin:0 0 8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{display:inline-flex;align-items:center;gap:8px;background:var(--chip);color:var(--chip-text);padding:8px 10px;border-radius:12px;font-weight:600;border:1px solid var(--border)}
+    .chip .dot{width:8px;height:8px;border-radius:50%}
+    .dot-views{background:#60a5fa}.dot-likes{background:#f472b6}.dot-comments{background:#facc15}.dot-saves{background:#34d399}
+
+    .actions{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+    .open{padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--panel)}
+
+    .nav{display:none;position:absolute;top:50%;translate:0 -50%;width:44px;height:44px;border-radius:50%;border:1px solid var(--border);background:#0e1422aa;color:#dbe4ff;place-content:center;cursor:pointer;backdrop-filter:blur(6px)}
+    .nav:hover{background:#0e1422}
+    .nav.prev{left:-6px} .nav.next{right:-6px}
+    @media(min-width:820px){.nav{display:grid}}
+
+    .state{padding:18px;text-align:center;color:var(--muted)}
+    .skel-rail{display:flex;gap:14px}
+    .skel{flex:0 0 88vw;max-width:360px;border-radius:16px;background:linear-gradient(90deg,#111627,#141a2b,#111627);background-size:300% 100%;animation:sh 1.2s infinite}
+    .skel .a{aspect-ratio:9/16;border-radius:16px 16px 0 0}
+    .skel .b{height:76px}
+    @keyframes sh{0%{background-position:0 0}100%{background-position:200% 0}}
   </style>
 </head>
 <body>
   <div class="app">
+    <!-- SIDEBAR -->
     <aside class="sidebar">
       <div class="brand"><span class="dot"></span><b>RastroO</b></div>
       <nav id="nav">
-        <a href="#/dashboard">Dashboard</a>
-        <a href="#/reels" class="active">Reels & Insights</a>
+        <a href="#/dashboard" class="active">Dashboard</a>
+        <a href="#/reels">Reels & Insights</a>
         <a href="#/connect">Conectar Instagram</a>
         <a href="#/config">Configurações</a>
       </nav>
-      <div class="mt muted" id="authInfo"></div>
     </aside>
 
+    <!-- MAIN -->
     <main class="main">
-      <div class="header">
-        <div><b id="title">Reels & Insights</b></div>
-        <button class="btn" id="btnConnect">Conectar com Instagram (Meta)</button>
+      <div class="topbar">
+        <div class="group">
+          <b id="title">Dashboard</b>
+          <span id="igTag" class="tag muted">IG: verificando…</span>
+        </div>
+        <div class="group">
+          <button class="btn" id="themeBtn">🌙/☀️ Tema</button>
+          <button class="btn primary" id="connectBtn">Conectar Instagram</button>
+        </div>
       </div>
 
       <div id="view"></div>
@@ -70,147 +144,197 @@
   </div>
 
   <script>
-    const view = document.getElementById('view');
-    const btnConnect = document.getElementById('btnConnect');
-    const authInfo = document.getElementById('authInfo');
-    const titleEl = document.getElementById('title');
-    const nav = document.getElementById('nav');
+    // ===== THEME =====
+    const THEME_KEY='rastroo_theme';
+    const htmlEl=document.documentElement;
+    function setTheme(t){ htmlEl.setAttribute('data-theme', t); localStorage.setItem(THEME_KEY,t); }
+    function initTheme(){ setTheme(localStorage.getItem(THEME_KEY) || 'dark'); }
+    function toggleTheme(){ setTheme(htmlEl.getAttribute('data-theme')==='dark'?'light':'dark'); }
+    document.getElementById('themeBtn').onclick = toggleTheme;
+    initTheme();
 
-    function setActive(hash) {
-      [...nav.querySelectorAll('a')].forEach(a=>{
-        a.classList.toggle('active', a.getAttribute('href') === hash);
-      });
-    }
+    // ===== NAV/ROUTER =====
+    const view = document.getElementById('view');
+    const nav = document.getElementById('nav');
+    const titleEl = document.getElementById('title');
+    const connectBtn = document.getElementById('connectBtn');
+    const igTag = document.getElementById('igTag');
+    function setActive(hash){[...nav.querySelectorAll('a')].forEach(a=>a.classList.toggle('active',a.getAttribute('href')===hash));}
 
     async function authStatus(){
-      const r = await fetch('/api/auth/status');
-      const j = await r.json();
-      const tag = j.connected ? `<span class="tag">IG: conectado</span>` : `<span class="tag muted">não conectado</span>`;
-      authInfo.innerHTML = `${tag}<div class="mt muted">${j.username ? '@'+j.username : ''}</div>`;
-      btnConnect.style.display = j.connected ? 'none':'inline-flex';
-      return j;
+      try{
+        const r = await fetch('/api/auth/status');
+        const j = await r.json();
+        igTag.textContent = j.connected ? `IG: conectado @${j.username||''}` : 'IG: não conectado';
+        igTag.className = 'tag ' + (j.connected ? '' : 'muted');
+        connectBtn.style.display = j.connected ? 'none' : 'inline-flex';
+        return j;
+      }catch{ igTag.textContent='IG: erro'; igTag.className='tag muted'; connectBtn.style.display='inline-flex'; return {connected:false}; }
+    }
+    connectBtn.onclick = ()=> location.href='/auth/ig/login';
+
+    // ===== DASHBOARD =====
+    async function pageDashboard(){
+      setActive('#/dashboard'); titleEl.textContent='Dashboard';
+      await authStatus();
+      view.innerHTML = `
+        <div class="cards">
+          <div class="kpi"><h4>Status do servidor</h4><b id="kpiSrv">-</b></div>
+          <div class="kpi"><h4>Instagram</h4><b id="kpiIg">-</b></div>
+          <div class="kpi"><h4>Hoje</h4><b id="kpiHoje">—</b></div>
+        </div>
+      `;
+      try{
+        const p = await fetch('/api/ping').then(r=>r.json());
+        document.getElementById('kpiSrv').textContent = p.ok ? 'Online' : 'Offline';
+      }catch{ document.getElementById('kpiSrv').textContent='Offline'; }
+      try{
+        const s = await fetch('/api/auth/status').then(r=>r.json());
+        document.getElementById('kpiIg').textContent = s.connected ? '@'+(s.username||'') : 'Desconectado';
+      }catch{}
+      // placeholder: você pode trocar por métricas reais do seu funil
+      document.getElementById('kpiHoje').textContent = new Date().toLocaleDateString('pt-BR');
     }
 
-    function goConnect(){
-      location.href = '/auth/ig/login';
-    }
-    btnConnect.addEventListener('click', goConnect);
+    // ===== REELS (carrossel 9:16 com métricas) =====
+    function num(x){ return (x ?? 0).toLocaleString('pt-BR'); }
+    function since(iso){ if(!iso) return ''; const d=new Date(iso), diff=(Date.now()-d)/1000, m=~~(diff/60), h=~~(m/60), dd=~~(h/24); if(dd>0) return d.toLocaleDateString('pt-BR'); if(h>0) return `${h} h`; if(m>0) return `${m} min`; return `${Math.max(1,~~diff)} s`; }
 
     async function pageReels(){
-      titleEl.textContent = 'Reels & Insights';
+      setActive('#/reels'); titleEl.textContent='Reels & Insights';
       const st = await authStatus();
       if (!st.connected) {
-        view.innerHTML = `<div class="muted">Conecte sua conta para ver os Reels.</div>`;
+        view.innerHTML = `<div class="state">Conecte sua conta em <a href="#/connect" style="text-decoration:underline">Conectar Instagram</a>.</div>`;
         return;
       }
-      view.innerHTML = `<div class="muted">Carregando Reels...</div>`;
-      const r = await fetch('/api/ig/reels');
-      const j = await r.json();
-      if (!j.ok) {
-        view.innerHTML = `<div class="muted">Erro ao carregar: ${j.error || 'falha'}</div>`;
-        return;
-      }
-      if (!j.count) {
-        view.innerHTML = `<div class="muted">Sem Reels para mostrar.</div>`;
-        return;
-      }
-      const cards = j.items.map(m=>{
-        const thumb = m.thumbnail_url || m.media_url || '';
-        return `
-          <a class="card" href="${m.permalink}" target="_blank" rel="noopener">
-            <div class="thumb" style="background-image:url('${thumb}')"></div>
-            <div class="meta">
-              <div class="row"><span>Plays</span><b>${m.video_play_count ?? '-'}</b></div>
-              <div class="row"><span>Likes</span><b>${m.like_count ?? '-'}</b></div>
-              <div class="row"><span>Comentários</span><b>${m.comments_count ?? '-'}</b></div>
-            </div>
-          </a>
-        `;
-      }).join('');
-      view.innerHTML = `<div class="cards">${cards}</div>`;
-    }
 
-    async function pageDashboard(){
-      titleEl.textContent = 'Dashboard';
-      await authStatus();
       view.innerHTML = `
-        <table class="table">
-          <thead><tr><th>Card</th><th>Valor</th></tr></thead>
-          <tbody>
-            <tr><td>Status</td><td id="st"></td></tr>
-            <tr><td>Data</td><td>${new Date().toLocaleString()}</td></tr>
-          </tbody>
-        </table>
+        <div class="reels-head">
+          <div class="reels-filters">
+            <input id="q" class="input" placeholder="Buscar na legenda…">
+            <select id="lim" class="input">
+              <option value="20">20</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+            </select>
+            <button class="btn" id="refresh">Atualizar</button>
+          </div>
+          <div class="muted">Dica: arraste para o lado</div>
+        </div>
+        <div id="state" class="state">
+          <div class="skel-rail">
+            <div class="skel"><div class="a"></div><div class="b"></div></div>
+            <div class="skel"><div class="a"></div><div class="b"></div></div>
+          </div>
+          <div style="margin-top:10px" class="muted">Carregando Reels…</div>
+        </div>
+        <div class="rail-wrap" style="display:none">
+          <button class="nav prev" aria-label="Anterior">◀</button>
+          <div class="rail" id="rail"></div>
+          <button class="nav next" aria-label="Próximo">▶</button>
+        </div>
       `;
-      const st = await fetch('/api/ping').then(r=>r.json()).catch(()=>({ok:false}));
-      document.getElementById('st').textContent = st.ok ? 'OK' : 'Falha';
+
+      const rail = document.getElementById('rail');
+      const state = document.getElementById('state');
+      const railWrap = document.querySelector('.rail-wrap');
+      const q = document.getElementById('q');
+      const lim = document.getElementById('lim');
+
+      document.querySelector('.nav.prev').onclick = () => rail.scrollBy({left: -window.innerWidth*0.7, behavior:'smooth'});
+      document.querySelector('.nav.next').onclick = () => rail.scrollBy({left:  window.innerWidth*0.7, behavior:'smooth'});
+
+      async function load(){
+        state.style.display='block'; railWrap.style.display='none';
+        try{
+          const r = await fetch('/api/ig/reels'); // o backend já limita a 100
+          const j = await r.json();
+          if (!j.ok) throw new Error(j.error||'Falha');
+          let list = j.items || [];
+
+          // filtro por legenda
+          const term = (q.value||'').trim().toLowerCase();
+          if (term) list = list.filter(m => (m.caption||'').toLowerCase().includes(term));
+
+          // limite
+          const L = parseInt(lim.value,10)||50;
+          list = list.slice(0, L);
+
+          if (!list.length) {
+            state.className='state'; state.textContent='Sem Reels para mostrar.'; return;
+          }
+
+          rail.innerHTML = '';
+          for(const m of list){
+            const el = document.createElement('article'); el.className='reel';
+            const thumb = m.thumbnail_url || m.media_url || '';
+            const plays = m.video_play_count ?? m.views ?? 0;
+            el.innerHTML = `
+              <div class="frame">
+                <img class="thumb" loading="lazy" referrerpolicy="no-referrer" src="${thumb}" alt="Reel thumbnail"/>
+                <div class="badge">Reel</div>
+              </div>
+              <div class="meta">
+                <p class="caption">${(m.caption||'').replace(/</g,'&lt;')}</p>
+                <div class="chips">
+                  <span class="chip"><span class="dot dot-views"></span>${num(plays)} views</span>
+                  <span class="chip"><span class="dot dot-likes"></span>${num(m.like_count)} likes</span>
+                  <span class="chip"><span class="dot dot-comments"></span>${num(m.comments_count)} comentários</span>
+                </div>
+                <div class="actions">
+                  <a class="open" href="${m.permalink}" target="_blank" rel="noopener">Abrir no Instagram ↗</a>
+                  <span class="muted">${since(m.timestamp)}</span>
+                </div>
+              </div>`;
+            rail.appendChild(el);
+          }
+
+          state.style.display='none'; railWrap.style.display='';
+        }catch(e){
+          state.className='state'; state.innerHTML = `Erro ao carregar: <span class="muted">${e.message||e}</span>`;
+        }
+      }
+
+      document.getElementById('refresh').onclick = load;
+      q.addEventListener('input', ()=>{ /* filtra local sem hit no servidor */ load(); }, {passive:true});
+      lim.addEventListener('change', load);
+      load();
     }
 
+    // ===== CONNECT =====
     async function pageConnect(){
-      titleEl.textContent = 'Conectar Instagram';
+      setActive('#/connect'); titleEl.textContent='Conectar Instagram';
       const st = await authStatus();
-      view.innerHTML = st.connected
-        ? `<div>Já conectado como <b>@${st.username || ''}</b>.</div>`
-        : `<div>Para conectar, clique no botão acima.</div>`;
+      if (st.connected) {
+        view.innerHTML = `<div class="kpi"><h4>Conta conectada</h4><b>@${st.username||''}</b><div class="muted" style="margin-top:8px">Pronto! Vá para <a href="#/reels" style="text-decoration:underline">Reels & Insights</a>.</div></div>`;
+      } else {
+        view.innerHTML = `<div class="kpi"><h4>Conectar</h4><b>Instagram (Meta)</b><div class="muted" style="margin:10px 0">Sua conta precisa ser <b>Business/Creator</b> e estar ligada a uma <b>Página do Facebook</b>.</div><button class="btn primary" onclick="location.href='/auth/ig/login'">Conectar com Instagram</button></div>`;
+      }
     }
 
+    // ===== CONFIG =====
     async function pageConfig(){
-      titleEl.textContent = 'Configurações';
+      setActive('#/config'); titleEl.textContent='Configurações';
       await authStatus();
       view.innerHTML = `
-        <div class="muted">Configurações básicas (placeholder).</div>
+        <div class="kpi">
+          <h4>Tema</h4>
+          <div class="group"><button class="btn" onclick="setTheme('dark')">Escuro</button><button class="btn" onclick="setTheme('light')">Claro</button></div>
+        </div>
       `;
     }
 
+    // ===== ROUTER =====
     async function router(){
-      const r = (location.hash || '#/reels');
-      setActive(r);
-      if (r.startsWith('#/reels')) return pageReels();
-      if (r.startsWith('#/dashboard')) return pageDashboard();
-      if (r.startsWith('#/connect')) return pageConnect();
-      if (r.startsWith('#/config')) return pageConfig();
-      return pageReels();
+      const h = (location.hash || '#/dashboard');
+      if (h.startsWith('#/reels')) return pageReels();
+      if (h.startsWith('#/connect')) return pageConnect();
+      if (h.startsWith('#/config')) return pageConfig();
+      return pageDashboard();
     }
-
     window.addEventListener('hashchange', router);
-    router();
     document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) router(); });
+    router();
   </script>
-<!-- PATCH: faz o menu de Reels abrir /public/reels.html e redireciona #/reels -->
-<script>
-(function () {
-  function redirectIfHash() {
-    const page = (location.hash || '').replace('#/', '');
-    if (page === 'reels') {
-      location.replace('/public/reels.html');
-      return true;
-    }
-    return false;
-  }
-
-  document.addEventListener('DOMContentLoaded', function(){
-    // 1) Se já existir link "#/reels", troca para /public/reels.html
-    const oldLink = document.querySelector('a[href="#/reels"]');
-    if (oldLink) oldLink.setAttribute('href', '/public/reels.html');
-
-    // 2) Se não existir link, cria um no <nav> (ou #nav)
-    const nav = document.getElementById('nav') || document.querySelector('nav');
-    if (nav && !nav.querySelector('a[href="/public/reels.html"]')) {
-      const a = document.createElement('a');
-      a.href = '/public/reels.html';
-      a.textContent = 'Reels & Insights';
-      a.style.display = 'block';
-      a.style.marginTop = '8px';
-      nav.appendChild(a);
-    }
-
-    // 3) Se alguém cair em #/reels, redireciona
-    redirectIfHash();
-  }, { once:true });
-
-  window.addEventListener('hashchange', redirectIfHash, { passive:true });
-})();
-</script>
-
 </body>
 </html>
