@@ -176,5 +176,41 @@
     router();
     document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) router(); });
   </script>
+<!-- PATCH: faz o menu de Reels abrir /public/reels.html e redireciona #/reels -->
+<script>
+(function () {
+  function redirectIfHash() {
+    const page = (location.hash || '').replace('#/', '');
+    if (page === 'reels') {
+      location.replace('/public/reels.html');
+      return true;
+    }
+    return false;
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    // 1) Se já existir link "#/reels", troca para /public/reels.html
+    const oldLink = document.querySelector('a[href="#/reels"]');
+    if (oldLink) oldLink.setAttribute('href', '/public/reels.html');
+
+    // 2) Se não existir link, cria um no <nav> (ou #nav)
+    const nav = document.getElementById('nav') || document.querySelector('nav');
+    if (nav && !nav.querySelector('a[href="/public/reels.html"]')) {
+      const a = document.createElement('a');
+      a.href = '/public/reels.html';
+      a.textContent = 'Reels & Insights';
+      a.style.display = 'block';
+      a.style.marginTop = '8px';
+      nav.appendChild(a);
+    }
+
+    // 3) Se alguém cair em #/reels, redireciona
+    redirectIfHash();
+  }, { once:true });
+
+  window.addEventListener('hashchange', redirectIfHash, { passive:true });
+})();
+</script>
+
 </body>
 </html>
