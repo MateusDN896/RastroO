@@ -1,0 +1,54 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RastroO — Diagnóstico</title>
+<style>
+body{margin:0;background:#0b1220;color:#eaf0ff;font:15px/1.5 system-ui,Segoe UI,Roboto}
+.box{max-width:920px;margin:4vh auto;padding:18px;border:1px solid #1b2b4a;background:#0e1730;border-radius:14px}
+pre{white-space:pre-wrap;background:#0a1226;border:1px solid #1b2b4a;padding:12px;border-radius:10px;max-height:300px;overflow:auto}
+input,textarea,button{width:100%;padding:10px;border-radius:10px;border:1px solid #1b2b4a;background:#0b162e;color:#eaf0ff}
+button{cursor:pointer;background:#3b82f6;border-color:#3b82f6;font-weight:700}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px} @media(max-width:800px){.row{grid-template-columns:1fr}}
+.ok{color:#86efac} .err{color:#fda4af}
+</style>
+<div class="box">
+  <h2>🔍 Diagnóstico RastroO</h2>
+  <button id="run">Rodar testes</button>
+  <pre id="log">Pronto para testar…</pre>
+
+  <h3>Conectar via token (Wizard manual)</h3>
+  <p>1) Abra o Graph Explorer, gere <b>User Access Token</b> com escopos: <code>pages_show_list</code>, <code>instagram_basic</code>, <code>instagram_manage_insights</code>, <code>pages_read_engagement</code>, <code>pages_read_user_content</code>.</p>
+  <div class="row">
+    <a target="_blank" href="https://developers.facebook.com/tools/explorer/"><button>🔗 Abrir Graph Explorer</button></a>
+    <a target="_blank" href="https://developers.facebook.com/tools/explorer/?method=GET&path=me%2Faccounts"><button>🔗 Testar /me/accounts</button></a>
+  </div>
+  <p>2) Cole o token (EA...):</p>
+  <textarea id="token" rows="3" placeholder="Cole aqui o token do Facebook (EA...)"></textarea>
+  <button id="force">Conectar</button>
+  <pre id="forceOut">Aguardando…</pre>
+</div>
+<script>
+const log = (m)=>{ const el=document.getElementById('log'); el.textContent += (el.textContent?'\n':'') + m; };
+const br = (o)=>JSON.stringify(o,null,2);
+
+async function t(url){
+  try{ const r=await fetch(url); const j=await r.json(); log(`✅ ${url}\n${br(j)}`); return j; }
+  catch(e){ log(`❌ ${url}\n${String(e)}`); return null; }
+}
+
+document.getElementById('run').onclick = async ()=>{
+  document.getElementById('log').textContent='';
+  await t('/api/ping');
+  await t('/api/auth/status');
+  await t('/api/ig/reels');
+};
+
+document.getElementById('force').onclick = async ()=>{
+  const token = document.getElementById('token').value.trim();
+  if (!token){ document.getElementById('forceOut').textContent='Cole o token primeiro.'; return; }
+  document.getElementById('forceOut').textContent='Conectando...';
+  try{
+    const r = await fetch('/api/debug/force-token', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token })});
+    const j = await r.json();
+    document.getElementById('forceOut').textContent = br(j);
+  }catch(e){ document.getElementById('forceOut').textContent = String(e); }
+};
+</script>
