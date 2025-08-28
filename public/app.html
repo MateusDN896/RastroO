@@ -1,274 +1,265 @@
 <!doctype html>
-<html lang="pt-BR" data-theme="dark">
+<html lang="pt-BR">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-  <title>RastroO — Dashboard</title>
-  <link rel="icon" href="/public/favicon.ico"/>
-  <style>
-    :root{
-      --bg:#070b12;--grad:linear-gradient(180deg,#0a0f1a 0%,#080c12 100%);
-      --panel:#0f1a2eec;--card:#0f1627;--text:#eaf0ff;--muted:#9aa8c2;--border:#1b2741;
-      --brand:#7c8cff;--brand2:#60a5fa;--ok:#10b981;--warn:#f59e0b;--danger:#ef4444;
-      --chip:#121a2f;--chip-text:#dbe4ff;--shadow:0 18px 60px rgba(0,0,0,.45);
-    }
-    [data-theme="light"]{
-      --bg:#f6f8fc;--grad:linear-gradient(180deg,#f6f8ff 0%,#ffffff 100%);
-      --panel:#ffffffee;--card:#ffffff;--text:#0f172a;--muted:#5b6a80;--border:#e6ebf4;
-      --brand:#3b82f6;--brand2:#2563eb;--chip:#eef2ff;--chip-text:#1e293b;--shadow:0 18px 40px rgba(0,0,0,.08);
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;color:var(--text);background:var(--bg);background-image:var(--grad);font:15px/1.5 ui-sans-serif,system-ui,Segoe UI,Roboto}
-    a{color:inherit;text-decoration:none}
-    .app{min-height:100vh;display:grid;grid-template-columns:280px 1fr}
-    @media(max-width:980px){.app{grid-template-columns:1fr}}
-    .sidebar{backdrop-filter:blur(10px);background:var(--panel);border-right:1px solid var(--border);padding:16px;position:sticky;top:0;height:100vh;overflow:auto}
-    @media(max-width:980px){.sidebar{position:static;height:auto;padding:10px 16px}}
-    .brand{display:flex;gap:10px;align-items:center;margin-bottom:12px}
-    .brand .logo{width:28px;height:28px;border-radius:10px;background:conic-gradient(from 210deg at 50% 50%, var(--brand), var(--brand2)); box-shadow:0 4px 18px color-mix(in oklab, var(--brand) 30%, transparent)}
-    .brand b{font-size:18px;letter-spacing:.3px}
-    nav{display:flex;flex-direction:column;gap:8px}
-    nav a{padding:10px 12px;border-radius:12px;border:1px solid transparent}
-    nav a.active{background:var(--card);border-color:var(--border)}
-    @media(max-width:980px){nav{flex-direction:row;overflow:auto} nav a{white-space:nowrap}}
-    .main{padding:18px}
-    .topbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
-    .group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .btn{display:inline-flex;gap:8px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--panel);cursor:pointer}
-    .btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));border-color:transparent;color:#fff}
-    .tag{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);background:var(--card)}
-    .muted{color:var(--muted)}
-    .card{background:color-mix(in oklab, var(--card) 86%, transparent);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px}
-
-    /* Carrossel Reels */
-    .block{margin-top:18px}
-    .rail-wrap{position:relative}
-    .rail{display:flex;gap:12px;overflow:auto;padding:2px 1px 10px;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none}
-    .rail::-webkit-scrollbar{display:none}
-    .reel{flex:0 0 72vw;max-width:300px;scroll-snap-align:center;background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
-    @media(min-width:900px){.reel{flex-basis:260px}}
-    .frame{position:relative;width:100%;aspect-ratio:9/16;background:#0a0d14;overflow:hidden}
-    .thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-    .badge{position:absolute;left:8px;top:8px;background:#000a;color:#fff;padding:5px 8px;border-radius:999px;font:700 11px/1 system-ui;border:1px solid #ffffff22}
-    .meta{padding:8px 10px}
-    .row{display:flex;justify-content:space-between;gap:8px}
-    .chip{display:inline-flex;gap:6px;align-items:center;background:var(--chip);color:var(--chip-text);padding:6px 8px;border-radius:10px;border:1px solid var(--border);font-size:12px}
-    .money{font-weight:800}
-    .nav{display:none;position:absolute;top:50%;translate:0 -50%;width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:#0e1422aa;color:#dbe4ff;place-content:center;cursor:pointer;backdrop-filter:blur(6px)}
-    .nav.prev{left:-6px} .nav.next{right:-6px}
-    @media(min-width:820px){.nav{display:grid}}
-    .alert{padding:10px 12px;border-radius:12px;border:1px solid;color:#fff;margin-bottom:10px}
-    .alert.err{background:#2a0d14;border-color:#5b1e27}
-    .pre{white-space:pre-wrap;background:#0b1222;border:1px solid #1f2b44;padding:10px;border-radius:10px;max-height:240px;overflow:auto;font:12px/1.4 ui-monospace, SFMono-Regular, Menlo}
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>RastroO — Dashboard</title>
+<style>
+  :root { --bg:#0b1220; --panel:#0e1730; --text:#eaf0ff; --muted:#9bb0d0; --border:#1b2b4a; --accent:#3b82f6; }
+  [data-theme="light"] { --bg:#fbfbfd; --panel:#ffffff; --text:#0c1323; --muted:#4a5568; --border:#e6e9f2; --accent:#2563eb; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,Segoe UI,Roboto}
+  .app{display:grid;grid-template-columns:260px 1fr;min-height:100dvh}
+  @media(max-width:980px){.app{grid-template-columns:1fr}}
+  .side{border-right:1px solid var(--border);background:var(--panel)}
+  .brand{padding:18px 16px;border-bottom:1px solid var(--border);font-weight:800}
+  .nav a{display:block;padding:12px 16px;color:var(--text);text-decoration:none;border-bottom:1px solid var(--border)}
+  .nav a:hover{background:rgba(255,255,255,.04)}
+  .top{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--panel);z-index:10}
+  .btn{appearance:none;border:1px solid var(--border);background:var(--panel);color:var(--text);border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.ghost{background:transparent}
+  .grid{display:grid;gap:12px;padding:12px;grid-template-columns:repeat(12,1fr)}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px}
+  .kpi{grid-column:span 12}
+  .kpi .row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media(min-width:720px){.kpi{grid-column:span 12}.kpi .row{grid-template-columns:repeat(6,1fr)}}
+  .kpi .mini{background:rgba(255,255,255,.03);border:1px dashed var(--border);border-radius:12px;padding:12px}
+  .muted{color:var(--muted);font-size:12px}
+  .title{font-weight:800;margin:0 0 6px}
+  .rowbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  select, input{border:1px solid var(--border);background:var(--panel);color:var(--text);border-radius:10px;padding:8px 10px}
+  /* Carrossel */
+  .carousel{overflow-x:auto;display:flex;gap:12px;scroll-snap-type:x mandatory;padding-bottom:4px}
+  .reel{min-width:220px;max-width:220px;scroll-snap-align:start;background:var(--panel);border:1px solid var(--border);border-radius:14px}
+  .thumb{aspect-ratio:9/16;width:100%;object-fit:cover;border-radius:12px 12px 0 0;background:#000}
+  .meta{padding:8px 10px}
+  .meta .caps{font-size:11px;color:var(--muted)}
+  .badge{display:inline-block;font-size:11px;padding:3px 8px;border-radius:999px;border:1px solid var(--border);margin-right:6px}
+  .ok{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.35)}
+  .warn{background:rgba(234,179,8,.1);border-color:rgba(234,179,8,.35)}
+  .err{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.35)}
+  /* footer fixo mobile */
+  .dock{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--border);padding:8px 12px;display:flex;gap:8px}
+  .hide{display:none}
+</style>
 </head>
 <body>
-  <div class="app">
-    <aside class="sidebar">
-      <div class="brand"><div class="logo"></div><b>RastroO</b></div>
-      <nav id="nav">
-        <a href="#/dashboard" class="active">Dashboard</a>
-        <a href="#/connect">Conectar Instagram</a>
-        <a href="#/config">Tema</a>
-      </nav>
-    </aside>
+<div class="app" id="app">
+  <aside class="side">
+    <div class="brand">🌀 RastroO</div>
+    <nav class="nav">
+      <a href="#/dashboard">📊 Dashboard</a>
+      <a href="#/reels">🎞️ Reels</a>
+      <a href="#/config">⚙️ Configurações</a>
+    </nav>
+  </aside>
 
-    <main class="main">
-      <div class="topbar">
-        <div class="group">
-          <span class="tag" id="igTag">IG: verificando…</span>
-        </div>
-        <div class="group">
-          <button class="btn" id="themeBtn">🌙/☀️ Tema</button>
-          <button class="btn primary" id="connectBtn">Conectar Instagram</button>
-        </div>
+  <main>
+    <div class="top">
+      <div class="rowbar">
+        <button class="btn" id="theme">🌓 Tema</button>
+        <span id="igStatus" class="badge">IG: checando…</span>
       </div>
+      <div class="rowbar">
+        <select id="periodo">
+          <option value="today">Hoje</option>
+          <option value="7">Últimos 7 dias</option>
+          <option value="15">Últimos 15 dias</option>
+          <option value="30" selected>Últimos 30 dias</option>
+          <option value="custom">Período personalizado…</option>
+        </select>
+        <input id="from" type="date" class="hide"/>
+        <input id="to" type="date" class="hide"/>
+        <button class="btn" id="apply">Aplicar</button>
+        <button class="btn" id="reload">Recarregar</button>
+        <button class="btn primary" id="wizard">Assistente</button>
+      </div>
+    </div>
 
-      <div id="view"></div>
-    </main>
-  </div>
+    <div class="grid">
+      <!-- KPIs (mostro se /api/stats existir; se não, escondo) -->
+      <section class="card kpi" id="kpi">
+        <p class="title">Resumo</p>
+        <div class="row">
+          <div class="mini"><div class="muted">Leads</div><div id="kpiLeads" style="font-weight:800;font-size:20px">—</div></div>
+          <div class="mini"><div class="muted">Vendas</div><div id="kpiSales" style="font-weight:800;font-size:20px">—</div></div>
+          <div class="mini"><div class="muted">Faturamento</div><div id="kpiRev" style="font-weight:800;font-size:20px">—</div></div>
+          <div class="mini"><div class="muted">Conversão</div><div id="kpiConv" style="font-weight:800;font-size:20px">—</div></div>
+          <div class="mini"><div class="muted">CTR</div><div id="kpiCtr" style="font-weight:800;font-size:20px">—</div></div>
+          <div class="mini"><div class="muted">Retorno</div><div id="kpiRoi" style="font-weight:800;font-size:20px">—</div></div>
+        </div>
+      </section>
 
-  <script>
-    // ===== THEME
-    const THEME_KEY='rastroo_theme';
-    const htmlEl=document.documentElement;
-    function setTheme(t){ htmlEl.setAttribute('data-theme', t); localStorage.setItem(THEME_KEY,t); }
-    function initTheme(){ setTheme(localStorage.getItem(THEME_KEY) || 'dark'); }
-    function toggleTheme(){ setTheme(htmlEl.getAttribute('data-theme')==='dark'?'light':'dark'); }
-    document.getElementById('themeBtn').onclick = toggleTheme; initTheme();
+      <!-- Reels -->
+      <section class="card" style="grid-column:span 12">
+        <div class="rowbar" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+          <p class="title" style="margin:0">Reels do período</p>
+          <div>
+            <button class="btn" id="manualImport">Importar manual</button>
+          </div>
+        </div>
+        <div id="reelsWrap">
+          <div class="carousel" id="reels"></div>
+          <p id="reelsEmpty" class="muted" style="margin-top:6px">Carregando Reels…</p>
+        </div>
+      </section>
+    </div>
 
-    // ===== HELPERS
-    const BRL = new Intl.NumberFormat('pt-BR',{ style:'currency', currency:'BRL' });
-    function num(x){ return (x ?? 0).toLocaleString('pt-BR'); }
+    <div class="dock">
+      <button class="btn" id="btnDash">Dashboard</button>
+      <button class="btn" id="btnReels">Reels</button>
+      <button class="btn primary" id="btnConnect">Conectar IG</button>
+    </div>
+  </main>
+</div>
 
-    // Parse do hash: "#/connect?error=..."
-    function parseHash(){
-      const raw = (location.hash || '#/dashboard').slice(1); // "/connect?error=..."
-      const qpos = raw.indexOf('?');
-      const path = qpos>=0 ? raw.slice(0,qpos) : raw;
-      const qs   = qpos>=0 ? raw.slice(qpos+1) : '';
-      const params = new URLSearchParams(qs);
-      return { path, params };
-    }
+<script>
+(function(){
+  // Tema
+  const root = document.documentElement;
+  const themeBtn = document.getElementById('theme');
+  function applyTheme(t){ root.setAttribute('data-theme', t); localStorage.setItem('theme', t); }
+  applyTheme(localStorage.getItem('theme') || 'dark');
+  themeBtn.onclick = ()=> applyTheme(root.getAttribute('data-theme')==='dark'?'light':'dark');
 
-    // ===== STATUS IG
-    const igTag = document.getElementById('igTag');
-    const connectBtn = document.getElementById('connectBtn');
-    connectBtn.onclick = ()=> location.href='/auth/ig/login';
-    async function authStatus(){
-      try{
-        const s = await fetch('/api/auth/status').then(r=>r.json());
-        igTag.textContent = s.connected ? `IG: @${s.username||''}` : 'IG: não conectado';
-        igTag.className = 'tag ' + (s.connected ? '' : 'muted');
-        connectBtn.style.display = s.connected ? 'none' : 'inline-flex';
-        return s;
-      }catch{
-        igTag.textContent='IG: erro'; igTag.className='tag muted'; connectBtn.style.display='inline-flex';
-        return { connected:false };
+  // Navegação simples
+  document.getElementById('wizard').onclick = ()=> window.open('/api/debug/wizard', '_blank');
+  document.getElementById('btnConnect').onclick = ()=> window.open('/api/debug/wizard', '_blank');
+  document.getElementById('reload').onclick = ()=> { loadAuth(); loadReels(); loadStats(); };
+  document.getElementById('btnDash').onclick = ()=> location.hash = '#/dashboard';
+  document.getElementById('btnReels').onclick = ()=> location.hash = '#/reels';
+
+  // Período
+  const sel = document.getElementById('periodo'), from = document.getElementById('from'), to = document.getElementById('to');
+  const apply = document.getElementById('apply');
+  sel.onchange = ()=>{
+    const v = sel.value;
+    if (v==='custom'){ from.classList.remove('hide'); to.classList.remove('hide'); }
+    else { from.classList.add('hide'); to.classList.add('hide'); }
+  };
+  apply.onclick = ()=> { loadReels(); loadStats(); };
+
+  // Status IG
+  async function loadAuth(){
+    try{
+      const r = await fetch('/api/auth/status'); const j = await r.json();
+      const el = document.getElementById('igStatus');
+      if (j.connected){
+        el.textContent = `IG: @${j.username||'conectado'}`;
+        el.className = 'badge ok';
+      } else {
+        el.textContent = 'IG: não conectado';
+        el.className = 'badge err';
       }
+    }catch(e){
+      const el = document.getElementById('igStatus');
+      el.textContent = 'IG: erro';
+      el.className = 'badge err';
     }
+  }
 
-    // ===== VIEWS
-    const view = document.getElementById('view');
+  // Reels
+  function periodParams(){
+    const v = sel.value;
+    if (v==='today' || v==='7' || v==='15' || v==='30') return {};
+    if (v==='custom' && from.value && to.value) return {from: from.value, to: to.value};
+    return {};
+  }
 
-    function errorHuman(code){
-      const map = {
-        token_exchange: 'Erro ao trocar o código por token (confira IG_REDIRECT no Render e em Valid OAuth Redirect).',
-        codigo_ou_state_ausente: 'State inválido/ausente. Inicie o login e finalize sem trocar de domínio.',
-        no_ig_business_linked: 'Não foi achado um Instagram Business/Creator ligado a uma Página que você administra.',
-        callback_exception: 'Erro inesperado no callback. Tente novamente.',
-      };
-      return map[code] || code;
+  function renderReels(items){
+    const wrap = document.getElementById('reels');
+    const empty = document.getElementById('reelsEmpty');
+    wrap.innerHTML = '';
+    if (!items || !items.length){
+      empty.textContent = 'Sem Reels para mostrar.';
+      return;
     }
-
-    function skeletonDash(){
-      return `
-        <section class="card" style="margin-bottom:14px">
-          <div style="display:flex;gap:10px;align-items:center;justify-content:space-between">
-            <div><b>Faturamento do dia</b><div class="muted">Carregando…</div></div>
-            <div class="tag">Status: <span id="srvTag">…</span></div>
-          </div>
-        </section>
-        <section class="block">
-          <h3>Reels do dia</h3>
-          <div class="rail-wrap">
-            <button class="nav prev">◀</button>
-            <div class="rail" id="rail"></div>
-            <button class="nav next">▶</button>
-          </div>
-          <div class="muted" id="reelsEmpty" style="padding:10px 2px;display:none">Sem Reels/vendas.</div>
-        </section>
-        <section class="card" style="margin-top:14px">
-          <b>Geos do dia</b>
-          <div class="muted">Carregando…</div>
-        </section>
-      `;
+    empty.textContent = '';
+    for (const m of items){
+      const card = document.createElement('div');
+      card.className = 'reel';
+      const img = document.createElement('img');
+      img.className = 'thumb';
+      img.src = m.thumbnail_url || m.media_url || '';
+      img.alt = m.caption||'';
+      img.loading = 'lazy';
+      card.appendChild(img);
+      const meta = document.createElement('div'); meta.className='meta';
+      const cap = document.createElement('div'); cap.className='caps'; cap.textContent = (m.caption||'').slice(0,80);
+      const nums = document.createElement('div'); nums.style.display='flex'; nums.style.gap='8px'; nums.style.flexWrap='wrap';
+      const b1 = `<span class="badge">▶ ${m.video_play_count??'—'}</span>`;
+      const b2 = `<span class="badge">❤ ${m.like_count??'—'}</span>`;
+      const b3 = `<span class="badge">💬 ${m.comments_count??'—'}</span>`;
+      nums.innerHTML = b1 + b2 + b3;
+      const link = document.createElement('a'); link.href = m.permalink; link.target='_blank'; link.textContent = 'Abrir no Instagram';
+      link.style.display='inline-block'; link.style.marginTop='6px'; link.style.color='var(--accent)';
+      meta.appendChild(cap); meta.appendChild(nums); meta.appendChild(link);
+      card.appendChild(meta);
+      wrap.appendChild(card);
     }
+  }
 
-    async function pageDashboard(){
-      const { params } = parseHash();
-      const err = params.get('error'); // se voltar do OAuth direto pro dashboard
-      view.innerHTML = (err ? `<div class="alert err">[OAuth] ${errorHuman(err)}</div>` : '') + skeletonDash();
-
-      // status
-      try { const p = await fetch('/api/ping').then(r=>r.json()); document.getElementById('srvTag').textContent = p.ok?'Online':'Offline'; } catch { document.getElementById('srvTag').textContent='Offline'; }
-
-      // vendas/receita hoje
-      const startOfToday = new Date(new Date().toDateString()).getTime();
-      const sales = await fetch(`/api/sales/by-reel?since=${startOfToday}&until=${Date.now()+1}`).then(r=>r.json()).catch(()=>({ok:false}));
-      // reels
-      const reels = await fetch('/api/ig/reels').then(r=>r.json()).catch(()=>({ok:false}));
-      const rail = document.getElementById('rail');
-      document.querySelector('.nav.prev').onclick = () => rail.scrollBy({left: -window.innerWidth*0.7, behavior:'smooth'});
-      document.querySelector('.nav.next').onclick = () => rail.scrollBy({left:  window.innerWidth*0.7, behavior:'smooth'});
-
-      if (!reels.ok || !reels.items?.length){ document.getElementById('reelsEmpty').style.display='block'; return; }
-      const byReel = sales.by_reel || {};
-      const scored = reels.items.map(m=>{
-        const idHit  = byReel[m.id];
-        const urlHit = byReel[m.permalink];
-        const s = (idHit?.sales || urlHit?.sales || 0);
-        const r$ = (idHit?.revenue || urlHit?.revenue || 0);
-        return { m, sales:s, revenue:r$ };
-      }).sort((a,b)=> b.sales - a.sales || b.revenue - a.revenue);
-      rail.innerHTML = scored.map((it,idx)=>{
-        const m = it.m, top = it.sales>0 && idx===0;
-        const badge = top ? `<span class="badge" style="background:#063;border-color:#0a4">+ vendido</span>` : `<span class="badge">Reel</span>`;
-        const thumb = m.thumbnail_url || m.media_url || '';
-        return `
-          <a class="reel" href="${m.permalink}" target="_blank" rel="noopener">
-            <div class="frame"><img class="thumb" loading="lazy" referrerpolicy="no-referrer" src="${thumb}" alt="Reel"/>${badge}</div>
-            <div class="meta"><div class="row"><span class="chip">Vendas: <b>${num(it.sales)}</b></span><span class="chip money">${BRL.format(it.revenue||0)}</span></div></div>
-          </a>
-        `;
-      }).join('');
+  async function loadReels(){
+    const empty = document.getElementById('reelsEmpty');
+    empty.textContent = 'Carregando Reels…';
+    try{
+      const r = await fetch('/api/ig/reels'); const j = await r.json();
+      if (j && j.ok && Array.isArray(j.items) && j.items.length){
+        renderReels(j.items);
+        localStorage.removeItem('reels_manual'); // preferir dados oficiais
+      } else {
+        // fallback manual
+        const manual = localStorage.getItem('reels_manual');
+        if (manual){
+          try { renderReels(JSON.parse(manual)); empty.textContent = '(dados manuais)'; }
+          catch { empty.textContent = 'Sem Reels para mostrar.'; }
+        } else {
+          empty.textContent = 'Sem Reels para mostrar.';
+        }
+      }
+    }catch(e){
+      const manual = localStorage.getItem('reels_manual');
+      if (manual){ renderReels(JSON.parse(manual)); empty.textContent='(dados manuais)'; }
+      else { empty.textContent = 'Erro ao carregar Reels.'; }
     }
+  }
 
-    async function pageConnect(){
-      const { params } = parseHash();
-      const err = params.get('error');
-      const st = await authStatus();
+  // Import manual (cola JSON de reels se IG não conectar a tempo)
+  document.getElementById('manualImport').onclick = ()=>{
+    const txt = prompt('Cole aqui um JSON com uma lista de reels (campos: thumbnail_url, media_url, caption, permalink, comments_count, like_count, video_play_count)...');
+    if (!txt) return;
+    try{
+      const arr = JSON.parse(txt);
+      if (!Array.isArray(arr)) throw new Error('Precisa ser um array');
+      localStorage.setItem('reels_manual', JSON.stringify(arr));
+      renderReels(arr);
+      document.getElementById('reelsEmpty').textContent = '(dados manuais)';
+      alert('Reels carregados localmente.');
+    }catch(e){ alert('JSON inválido: ' + e.message); }
+  };
 
-      view.innerHTML = `
-        ${err ? `<div class="alert err">[OAuth] ${errorHuman(err)}</div>` : ''}
-        <section class="card" style="margin-bottom:14px">
-          <h3 style="margin:0 0 10px 0">Conectar Instagram</h3>
-          <div class="muted" style="margin-bottom:10px">
-            Use este botão para iniciar o login pelo Facebook. Não troque de domínio no meio.
-          </div>
-          ${st.connected
-            ? `<div class="tag">Conectado como <b>@${st.username||''}</b></div>`
-            : `<button class="btn primary" id="btnLogin">Conectar Instagram</button>`
-          }
-        </section>
-
-        <section class="card">
-          <h3 style="margin:0 0 10px 0">Debug rápido</h3>
-          <div class="group" style="margin-bottom:10px;flex-wrap:wrap">
-            <button class="btn" id="bStatus">Ver /api/auth/status</button>
-            <button class="btn" id="bPages">Ver /api/debug/fb/pages</button>
-            <button class="btn" id="bReset">Resetar conexão</button>
-          </div>
-          <pre class="pre" id="out">Clique em um dos botões acima…</pre>
-        </section>
-      `;
-
-      const out = document.getElementById('out');
-      const setOut = (obj)=> out.textContent = (typeof obj==='string')? obj : JSON.stringify(obj, null, 2);
-
-      const btnLogin = document.getElementById('btnLogin');
-      if (btnLogin) btnLogin.onclick = ()=> location.href='/auth/ig/login';
-
-      document.getElementById('bStatus').onclick = async ()=>{
-        try { setOut(await fetch('/api/auth/status').then(r=>r.json())); } catch(e){ setOut(String(e)); }
-      };
-      document.getElementById('bPages').onclick = async ()=>{
-        try { setOut(await fetch('/api/debug/fb/pages').then(r=>r.json())); } catch(e){ setOut(String(e)); }
-      };
-      document.getElementById('bReset').onclick = async ()=>{
-        try { setOut(await fetch('/api/debug/auth/reset').then(r=>r.json())); } catch(e){ setOut(String(e)); }
-        // depois do reset, mostre botão de login
-        location.hash = '#/connect';
-      };
+  // KPIs (opcional — se /api/stats não existir, escondo)
+  async function loadStats(){
+    try{
+      const r = await fetch('/api/stats'); // se não existir, vai 404
+      if (!r.ok) throw new Error('no');
+      const j = await r.json();
+      document.getElementById('kpiLeads').textContent = j.leads ?? '—';
+      document.getElementById('kpiSales').textContent = j.sales ?? '—';
+      document.getElementById('kpiRev').textContent = j.revenue ?? '—';
+      document.getElementById('kpiConv').textContent = j.conversion ?? '—';
+      document.getElementById('kpiCtr').textContent = j.ctr ?? '—';
+      document.getElementById('kpiRoi').textContent = j.roi ?? '—';
+      document.getElementById('kpi').style.display = '';
+    }catch{
+      document.getElementById('kpi').style.display = 'none';
     }
+  }
 
-    async function pageConfig(){ toggleTheme(); location.hash='#/dashboard'; }
-
-    // ===== ROUTER
-    const nav = document.getElementById('nav');
-    function setActive(hash){[...nav.querySelectorAll('a')].forEach(a=>a.classList.toggle('active',a.getAttribute('href')===hash));}
-    async function router(){
-      const { path } = parseHash();
-      setActive('#'+path);
-      await authStatus();
-      if (path==='/connect') return pageConnect();
-      if (path==='/config')  return pageConfig();
-      return pageDashboard();
-    }
-    window.addEventListener('hashchange', router);
-    document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) router(); });
-    router();
-  </script>
+  // init
+  loadAuth(); loadReels(); loadStats();
+})();
+</script>
 </body>
 </html>
