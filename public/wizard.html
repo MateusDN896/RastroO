@@ -1,32 +1,21 @@
-<!doctype html>
-<html lang="pt-BR">
-<head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>RastroO — Assistente de Conexão</title>
-<style>
-  body{margin:0;background:#0b1220;color:#eaf0ff;font:16px/1.5 system-ui,Segoe UI,Roboto}
-  .box{max-width:880px;margin:4vh auto;padding:20px;border:1px solid #1b2b4a;background:#0e1730;border-radius:14px}
-  input,textarea,button{width:100%;padding:12px;border-radius:10px;border:1px solid #1b2b4a;background:#0b162e;color:#eaf0ff}
-  button{cursor:pointer;background:#3b82f6;border-color:#3b82f6;font-weight:700}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px} @media(max-width:720px){.row{grid-template-columns:1fr}}
-  pre{white-space:pre-wrap;background:#0a1226;border:1px solid #1b2b4a;padding:12px;border-radius:10px;max-height:260px;overflow:auto}
-  a{color:#9dc1ff}
-</style>
-</head>
-<body>
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RastroO — Assistente</title>
+<style>body{margin:0;background:#0b1220;color:#eaf0ff;font:16px/1.5 system-ui,Segoe UI,Roboto}.box{max-width:880px;margin:4vh auto;padding:20px;border:1px solid #1b2b4a;background:#0e1730;border-radius:14px}input,textarea,button{width:100%;padding:12px;border-radius:10px;border:1px solid #1b2b4a;background:#0b162e;color:#eaf0ff}button{cursor:pointer;background:#3b82f6;border-color:#3b82f6;font-weight:700}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:720px){.row{grid-template-columns:1fr}}pre{white-space:pre-wrap;background:#0a1226;border:1px solid #1b2b4a;padding:12px;border-radius:10px;max-height:260px;overflow:auto}a{color:#9dc1ff}</style>
 <div class="box">
   <h2>Conectar Instagram (modo rápido)</h2>
   <ol>
-    <li>Abra o <b>Graph Explorer</b> com seu Facebook (ADMIN da Página ligada ao IG).</li>
-    <li>Get Token → <b>User Access Token</b>. Marque: <code>pages_show_list</code>, <code>instagram_basic</code>, <code>instagram_manage_insights</code>, <code>pages_read_engagement</code>, <code>pages_read_user_content</code>.</li>
-    <li>Copie o token (começa com <code>EA...</code>), cole abaixo e clique <b>Conectar</b>.</li>
+    <li>Abrir <b>Graph Explorer</b> (perfil ADMIN da Página do IG).</li>
+    <li>Get Token → <b>User Access Token</b> com escopos:<br>
+      <code>pages_show_list</code>, <code>instagram_basic</code>, <code>instagram_manage_insights</code>, <code>pages_read_engagement</code>, <code>pages_read_user_content</code>.
+    </li>
+    <li>Colar o token (EA...) e clicar <b>Conectar</b>.</li>
   </ol>
   <div class="row" style="margin:12px 0">
     <p><a target="_blank" rel="noopener" href="https://developers.facebook.com/tools/explorer/">🔗 Abrir Graph Explorer</a></p>
     <p><a target="_blank" rel="noopener" href="https://developers.facebook.com/tools/explorer/?method=GET&path=me%2Faccounts">🔗 Testar /me/accounts</a></p>
   </div>
   <label>Token do Facebook</label>
-  <textarea id="token" rows="4" placeholder="Cole aqui o token gerado (EA...)"></textarea>
+  <textarea id="token" rows="4" placeholder="Cole aqui o token (EA...)"></textarea>
   <div style="margin:10px 0"></div>
   <button id="go">Conectar</button>
   <div style="margin:10px 0"></div>
@@ -36,19 +25,11 @@
 const out = document.getElementById('out');
 document.getElementById('go').onclick = async ()=>{
   const token = document.getElementById('token').value.trim();
-  if (!token){ out.textContent = 'Cole o token primeiro.'; return; }
-  out.textContent = 'Conectando...';
+  if (!token){ out.textContent='Cole o token primeiro.'; return; }
+  out.textContent='Conectando...';
   try{
-    const r = await fetch('/api/debug/force-token', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ token })
-    });
-    const j = await r.json();
-    out.textContent = JSON.stringify(j, null, 2);
-    if (j.ok) setTimeout(()=> location.href='/public/app.html#/dashboard', 800);
-  }catch(e){ out.textContent = String(e); }
+    const r = await fetch('/api/debug/force-token', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token })});
+    const j = await r.json(); out.textContent = JSON.stringify(j, null, 2);
+  }catch(e){ out.textContent=String(e); }
 };
 </script>
-</body>
-</html>
